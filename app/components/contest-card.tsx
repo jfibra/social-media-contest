@@ -11,6 +11,24 @@ interface ContestCardProps {
 }
 
 export default function ContestCard({ contest, featured = false, className = "" }: ContestCardProps) {
+  // Determine status badge color
+  const statusColor =
+    {
+      active: "bg-green-500",
+      upcoming: "bg-realty-highlight",
+      ended: "bg-gray-500",
+      canceled: "bg-red-500",
+    }[contest.status] || "bg-realty-highlight"
+
+  // Determine status label
+  const statusLabel =
+    {
+      active: "Active",
+      upcoming: "Upcoming",
+      ended: "Ended",
+      canceled: "Canceled",
+    }[contest.status] || "Unknown"
+
   return (
     <div className={`contest-card ${className} ${featured ? "md:col-span-2" : ""}`}>
       <Link href={`/contests/${contest.slug}`}>
@@ -23,11 +41,11 @@ export default function ContestCard({ contest, featured = false, className = "" 
             className="object-cover transition-transform duration-500 hover:scale-105"
             loading="lazy"
           />
-          {contest.status === "active" && (
-            <div className="absolute top-4 right-4 bg-realty-highlight text-white px-3 py-1 rounded-full text-sm font-medium">
-              Active
-            </div>
-          )}
+          <div
+            className={`absolute top-4 right-4 ${statusColor} text-white px-3 py-1 rounded-full text-sm font-medium`}
+          >
+            {statusLabel}
+          </div>
         </div>
         <div className="p-4 bg-white">
           <div className="flex items-center space-x-2 mb-2">

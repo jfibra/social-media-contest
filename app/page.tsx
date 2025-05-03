@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { getActiveContest } from "@/lib/api"
 import HeroSection from "./components/hero-section"
+import DefaultHeroSection from "./components/default-hero-section"
 import CompanyLogos from "./components/company-logos"
 import AboutSection from "./components/about-section"
 import CTASection from "./components/cta-section"
@@ -32,61 +33,48 @@ export const metadata: Metadata = {
 export default async function Home() {
   const activeContest = await getActiveContest()
 
-  // Fallback contest in case API fails
-  const fallbackContest = {
-    id: 1,
-    name: "Summer Promo Contest",
-    description: "Join our summer promo and win prizes!",
-    logoUrl: "/placeholder.svg?key=pggs7",
-    posterUrl: "/images/contest-poster.png", // Use a more specific fallback image
-    startDate: "2025-05-01 00:00:00",
-    endDate: "2025-05-31 23:59:59",
-    status: "upcoming" as const,
-    slug: "summer-promo-contest",
-  }
-
-  const contest = activeContest || fallbackContest
-
   return (
     <>
-      <HeroSection contest={contest} />
+      {activeContest ? <HeroSection contest={activeContest} /> : <DefaultHeroSection />}
       <CompanyLogos />
       <AboutSection />
       <CTASection />
 
       {/* JSON-LD structured data for SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Event",
-            name: contest.name,
-            description: contest.description,
-            startDate: contest.startDate,
-            endDate: contest.endDate,
-            image: contest.posterUrl,
-            url: `${SITE_URL}/contests/${contest.slug}`,
-            organizer: {
-              "@type": "Organization",
-              name: "Leuterio Realty & Brokerage",
-              url: "https://leuteriorealty.com",
-            },
-            location: {
-              "@type": "VirtualLocation",
-              url: `${SITE_URL}/contests/${contest.slug}`,
-            },
-            offers: {
-              "@type": "Offer",
-              availability: "https://schema.org/InStock",
-              price: "0",
-              priceCurrency: "PHP",
-              validFrom: contest.startDate,
-              url: `${SITE_URL}/contests/${contest.slug}`,
-            },
-          }),
-        }}
-      />
+      {activeContest && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Event",
+              name: activeContest.name,
+              description: activeContest.description,
+              startDate: activeContest.startDate,
+              endDate: activeContest.endDate,
+              image: activeContest.posterUrl,
+              url: `${SITE_URL}/contests/${activeContest.slug}`,
+              organizer: {
+                "@type": "Organization",
+                name: "Leuterio Realty & Brokerage",
+                url: "https://leuteriorealty.com",
+              },
+              location: {
+                "@type": "VirtualLocation",
+                url: `${SITE_URL}/contests/${activeContest.slug}`,
+              },
+              offers: {
+                "@type": "Offer",
+                availability: "https://schema.org/InStock",
+                price: "0",
+                priceCurrency: "PHP",
+                validFrom: activeContest.startDate,
+                url: `${SITE_URL}/contests/${activeContest.slug}`,
+              },
+            }),
+          }}
+        />
+      )}
     </>
   )
 }

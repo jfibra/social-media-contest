@@ -41,6 +41,7 @@ export default async function ContestsPage() {
       startDate: "2025-05-01 00:00:00",
       endDate: "2025-05-31 23:59:59",
       status: "upcoming" as const,
+      visibility: "public" as const,
       slug: "summer-promo-contest",
     },
     {
@@ -52,6 +53,7 @@ export default async function ContestsPage() {
       startDate: "2025-05-01 00:00:00",
       endDate: "2025-05-31 23:59:59",
       status: "upcoming" as const,
+      visibility: "public" as const,
       slug: "rainy-season-challenge",
     },
     {
@@ -62,7 +64,8 @@ export default async function ContestsPage() {
       posterUrl: "/placeholder.svg?key=f8omv",
       startDate: "2025-04-01 00:00:00",
       endDate: "2025-04-30 23:59:59",
-      status: "completed" as const,
+      status: "ended" as const,
+      visibility: "public" as const,
       slug: "real-estate-quiz",
     },
   ]
@@ -70,10 +73,15 @@ export default async function ContestsPage() {
   // Use fallback contests if API returns empty array
   const displayContests = contests && contests.length > 0 ? contests : fallbackContests
 
-  // Find active contests
-  const activeContests = displayContests.filter((contest) => contest.status === "active")
-  const completedContests = displayContests.filter((contest) => contest.status === "completed")
-  const upcomingContests = displayContests.filter((contest) => contest.status === "upcoming")
+  // Filter out canceled contests and private contests
+  const validContests = displayContests.filter(
+    (contest) => contest.status !== "canceled" && contest.visibility === "public",
+  )
+
+  // Find contests by status
+  const activeContests = validContests.filter((contest) => contest.status === "active")
+  const endedContests = validContests.filter((contest) => contest.status === "ended")
+  const upcomingContests = validContests.filter((contest) => contest.status === "upcoming")
 
   return (
     <div className="min-h-screen pt-24 pb-16">
@@ -117,11 +125,11 @@ export default async function ContestsPage() {
           </div>
         )}
 
-        {completedContests.length > 0 && (
+        {endedContests.length > 0 && (
           <div>
             <h2 className="text-2xl md:text-3xl font-bold mb-8 opacity-0 animate-fadeIn">Past Contests</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {completedContests.map((contest, index) => (
+              {endedContests.map((contest, index) => (
                 <ContestCard
                   key={contest.id}
                   contest={contest}
@@ -129,6 +137,16 @@ export default async function ContestsPage() {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {validContests.length === 0 && (
+          <div className="text-center py-16">
+            <h2 className="text-2xl font-bold mb-4">No Contests Available</h2>
+            <p className="text-realty-text">
+              There are currently no public contests available. Please check back later or contact us for more
+              information.
+            </p>
           </div>
         )}
       </div>
@@ -140,7 +158,7 @@ export default async function ContestsPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "ItemList",
-            itemListElement: displayContests.map((contest, index) => ({
+            itemListElement: validContests.map((contest, index) => ({
               "@type": "ListItem",
               position: index + 1,
               item: {

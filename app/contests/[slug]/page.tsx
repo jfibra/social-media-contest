@@ -46,10 +46,14 @@ export async function generateMetadata({ params }: ContestPageProps): Promise<Me
 export default async function ContestPage({ params }: ContestPageProps) {
   // Try to get all contests first
   const contests = await getAllContests()
-  let contest = contests.find((c) => c.slug === params.slug)
+
+  // Filter out private and canceled contests
+  const validContests = contests.filter((contest) => contest.visibility === "public" && contest.status !== "canceled")
+
+  let contest = validContests.find((c) => c.slug === params.slug)
 
   // If not found and contests array is empty, try to get the active contest
-  if (!contest && contests.length === 0) {
+  if (!contest && validContests.length === 0) {
     const activeContest = await getActiveContest()
     if (activeContest && activeContest.slug === params.slug) {
       contest = activeContest
@@ -73,6 +77,7 @@ export default async function ContestPage({ params }: ContestPageProps) {
       startDate: new Date().toISOString(),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       status: "upcoming" as const,
+      visibility: "public" as const,
       slug: params.slug,
     }
   }

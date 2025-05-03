@@ -1,7 +1,7 @@
 "use client"
 import Image from "next/image"
 import Link from "next/link"
-import { Calendar, Share2, Trophy, FileText } from "lucide-react"
+import { Calendar, Share2, Trophy, FileText, AlertTriangle } from "lucide-react"
 import { SITE_URL } from "@/app/env"
 import { getDateRange } from "@/lib/utils"
 
@@ -13,7 +13,8 @@ interface Contest {
   endDate: string
   posterUrl?: string
   logoUrl?: string
-  status: "active" | "upcoming" | "completed"
+  status: "active" | "ended" | "upcoming" | "canceled"
+  visibility?: "public" | "private"
   rules?: string
   prizes?: string
 }
@@ -43,6 +44,24 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
     - 10 Consolation Prizes: Leuterio Realty merchandise
   `
 
+  // Determine status badge color
+  const statusColor =
+    {
+      active: "bg-green-500",
+      upcoming: "bg-realty-highlight",
+      ended: "bg-gray-500",
+      canceled: "bg-red-500",
+    }[contest.status] || "bg-realty-highlight"
+
+  // Determine status label
+  const statusLabel =
+    {
+      active: "Active",
+      upcoming: "Upcoming",
+      ended: "Ended",
+      canceled: "Canceled",
+    }[contest.status] || "Unknown"
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="container mx-auto px-4">
@@ -58,6 +77,15 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
           </Link>
         </div>
 
+        {contest.status === "canceled" && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-8">
+            <div className="flex items-center">
+              <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
+              <p className="text-red-700">This contest has been canceled. Please check our other available contests.</p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 opacity-0 animate-fadeIn">
             <div className="relative h-[400px] md:h-[500px] w-full rounded-lg overflow-hidden mb-8">
@@ -68,8 +96,8 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
                 priority
                 className="object-cover"
               />
-              <div className="absolute top-4 right-4 bg-realty-highlight text-white px-4 py-2 rounded-full">
-                {contest.status === "active" ? "Active" : contest.status === "upcoming" ? "Upcoming" : "Completed"}
+              <div className={`absolute top-4 right-4 ${statusColor} text-white px-4 py-2 rounded-full`}>
+                {statusLabel}
               </div>
             </div>
 
@@ -109,7 +137,7 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-24">
               <div className="relative h-[200px] w-full mb-6">
                 <Image
-                  src={contest.logoUrl || "/placeholder.svg?height=200&width=200&query=real+estate+contest+logo"}
+                  src={contest.logoUrl || "/placeholder.svg?height=200&width=200&query=contest+logo"}
                   alt={`${contest.name} Logo`}
                   fill
                   className="object-contain"
@@ -138,9 +166,15 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
                   </button>
                 )}
 
-                {contest.status === "completed" && (
+                {contest.status === "ended" && (
                   <div className="bg-gray-100 text-realty-text px-6 py-3 rounded-md font-medium block w-full text-center">
                     Contest Ended
+                  </div>
+                )}
+
+                {contest.status === "canceled" && (
+                  <div className="bg-red-100 text-red-700 px-6 py-3 rounded-md font-medium block w-full text-center">
+                    Contest Canceled
                   </div>
                 )}
               </div>

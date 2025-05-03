@@ -9,12 +9,19 @@ export interface Contest {
   end_time: string
   entry_deadline: string | null
   max_entries_per_user: number
-  visibility: string
-  status: "active" | "completed" | "upcoming"
+  visibility: "public" | "private"
+  status: "active" | "ended" | "upcoming" | "canceled"
   memberid: string
   created_by: string | null
   created_at: string
   updated_at: string
+
+  // These are mapped fields for our internal use
+  name?: string
+  startDate?: string
+  endDate?: string
+  logoUrl?: string
+  posterUrl?: string
 }
 
 export interface ContestResponse {
