@@ -47,20 +47,18 @@ export default async function ContestPage({ params }: ContestPageProps) {
   // Try to get all contests first
   const contests = await getAllContests()
 
-  // Filter out private and canceled contests
-  const validContests = contests.filter((contest) => contest.visibility === "public" && contest.status !== "canceled")
-
-  let contest = validContests.find((c) => c.slug === params.slug)
+  // Find the contest by slug (getAllContests already filters for public contests)
+  let contest = contests.find((c) => c.slug === params.slug)
 
   // If not found and contests array is empty, try to get the active contest
-  if (!contest && validContests.length === 0) {
+  if (!contest && contests.length === 0) {
     const activeContest = await getActiveContest()
     if (activeContest && activeContest.slug === params.slug) {
       contest = activeContest
     }
   }
 
-  // If still not found, use a fallback contest for development
+  // If still not found, use a fallback contest for development or redirect to 404
   if (!contest) {
     // In production, we would redirect to 404
     if (process.env.NODE_ENV === "production") {

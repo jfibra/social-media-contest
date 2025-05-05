@@ -18,26 +18,32 @@ export async function getActiveContest(): Promise<Contest | null> {
       return null
     }
 
-    // Filter out canceled contests and private contests
-    const validContests = data["0"].filter(
-      (contest) => contest.status !== "canceled" && contest.visibility === "public",
-    )
+    // Filter out private contests and map to our internal format
+    const contests = data["0"]
+      .filter((contest) => contest.visibility === "public")
+      .map((contest) => ({
+        ...contest,
+        name: contest.contest_name,
+        startDate: contest.start_time,
+        endDate: contest.end_time,
+        logoUrl: contest.logo_url,
+        posterUrl: contest.poster_url,
+      }))
 
-    if (validContests.length === 0) {
-      console.error("No valid active contests found")
+    // First try to find an active contest
+    let selectedContest = contests.find((contest) => contest.status === "active")
+
+    // If no active contest, try to find an upcoming contest
+    if (!selectedContest) {
+      selectedContest = contests.find((contest) => contest.status === "upcoming")
+    }
+
+    // If still no contest found, return null
+    if (!selectedContest) {
       return null
     }
 
-    // Return the first valid contest in the array
-    return {
-      ...validContests[0],
-      // Map the API fields to our internal field names for consistency
-      name: validContests[0].contest_name,
-      startDate: validContests[0].start_time,
-      endDate: validContests[0].end_time,
-      logoUrl: validContests[0].logo_url,
-      posterUrl: validContests[0].poster_url,
-    } as unknown as Contest
+    return selectedContest as unknown as Contest
   } catch (error) {
     console.error("Error fetching active contest:", error)
     return null
@@ -63,18 +69,17 @@ export async function getAllContests(): Promise<Contest[]> {
       return []
     }
 
-    // Filter out private contests if not authorized
-    const publicContests = data["0"].filter((contest) => contest.visibility === "public")
-
-    // Map the API fields to our internal field names for consistency
-    return publicContests.map((contest) => ({
-      ...contest,
-      name: contest.contest_name,
-      startDate: contest.start_time,
-      endDate: contest.end_time,
-      logoUrl: contest.logo_url,
-      posterUrl: contest.poster_url,
-    })) as unknown as Contest[]
+    // Filter out private contests and map to our internal format
+    return data["0"]
+      .filter((contest) => contest.visibility === "public")
+      .map((contest) => ({
+        ...contest,
+        name: contest.contest_name,
+        startDate: contest.start_time,
+        endDate: contest.end_time,
+        logoUrl: contest.logo_url,
+        posterUrl: contest.poster_url,
+      })) as unknown as Contest[]
   } catch (error) {
     console.error("Error fetching contests:", error)
     return []
