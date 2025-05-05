@@ -1,12 +1,12 @@
 "use client"
 
 import type React from "react"
-import ProtectedRoute from "@/components/protected-route"
+import AdminProtectedRoute from "@/components/admin-protected-route"
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <ProtectedRoute>{children}</ProtectedRoute>
+  return <AdminProtectedRoute>{children}</AdminProtectedRoute>
 }

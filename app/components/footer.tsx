@@ -14,16 +14,31 @@ export default function Footer() {
               Empowering real estate professionals through innovative marketing and social media strategies.
             </p>
             <div className="flex space-x-4">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+              <a
+                href="https://www.facebook.com/leuteriorealty"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+              >
                 <Facebook className="h-5 w-5 text-gray-300 hover:text-white transition-colors" />
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <a
+                href="https://www.instagram.com/filipinohomesleuteriorealty/?hl=en"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+              >
                 <Instagram className="h-5 w-5 text-gray-300 hover:text-white transition-colors" />
               </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
+              <a href="https://x.com/leuteriorealty" target="_blank" rel="noopener noreferrer" aria-label="X Twitter">
                 <Twitter className="h-5 w-5 text-gray-300 hover:text-white transition-colors" />
               </a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+              <a
+                href="https://www.linkedin.com/company/leuterio-realty-&-brokerage/posts/?feedView=all"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn"
+              >
                 <Linkedin className="h-5 w-5 text-gray-300 hover:text-white transition-colors" />
               </a>
             </div>
@@ -60,23 +75,26 @@ export default function Footer() {
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <MapPin className="h-5 w-5 text-realty-highlight" />
-                <span className="text-gray-300">123 Real Estate Ave, Makati City, Philippines</span>
+                <span className="text-gray-300">133F Aznar Road, Sambag 2, Urgello St. Cebu City</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="h-5 w-5 text-realty-highlight" />
-                <span className="text-gray-300">+63 123 456 7890</span>
+                <span className="text-gray-300">(+63) 977 815 0888</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-realty-highlight" />
-                <a href="mailto:info@leuteriorealty.com" className="text-gray-300 hover:text-white transition-colors">
-                  info@leuteriorealty.com
+                <a
+                  href="mailto:info.leuteriorealty@gmail.com"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  info.leuteriorealty@gmail.com
                 </a>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+        <div className="border-t border-gray-700 mt-8 pt-8 text-center text-white">
           <p>&copy; {currentYear} Leuterio Realty & Brokerage. All rights reserved.</p>
         </div>
       </div>
