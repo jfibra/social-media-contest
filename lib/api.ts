@@ -3,8 +3,11 @@ import type { Contest, ContestResponse, ContestsResponse } from "@/types/contest
 
 export async function getActiveContest(): Promise<Contest | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/scm/contests/active`, {
-      next: { revalidate: 3600 }, // Revalidate every hour
+    // Add cache-busting query parameter to prevent caching
+    const timestamp = new Date().getTime()
+    const response = await fetch(`${API_BASE_URL}/scm/contests/active?t=${timestamp}`, {
+      cache: "no-store", // Disable caching
+      next: { revalidate: 0 }, // Disable revalidation
     })
 
     if (!response.ok) {
@@ -52,10 +55,11 @@ export async function getActiveContest(): Promise<Contest | null> {
 
 export async function getAllContests(): Promise<Contest[]> {
   try {
-    // First try to get all contests from the API
-    // We'll use the active endpoint since we know it works
-    const response = await fetch(`${API_BASE_URL}/scm/contests/active`, {
-      next: { revalidate: 3600 }, // Revalidate every hour
+    // Add cache-busting query parameter to prevent caching
+    const timestamp = new Date().getTime()
+    const response = await fetch(`${API_BASE_URL}/scm/contests/active?t=${timestamp}`, {
+      cache: "no-store", // Disable caching
+      next: { revalidate: 0 }, // Disable revalidation
     })
 
     if (!response.ok) {

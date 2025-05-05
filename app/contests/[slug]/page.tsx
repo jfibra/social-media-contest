@@ -4,6 +4,10 @@ import { getAllContests, getActiveContest } from "@/lib/api"
 import { SITE_URL } from "@/app/env"
 import ContestClientPage from "./ContestClientPage"
 
+// Disable caching for this page
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 interface ContestPageProps {
   params: {
     slug: string

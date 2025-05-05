@@ -7,6 +7,10 @@ import AboutSection from "./components/about-section"
 import CTASection from "./components/cta-section"
 import { SITE_URL } from "./env"
 
+// Disable caching for this page
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export const metadata: Metadata = {
   title: "Social Media Contests | Leuterio Realty & Brokerage",
   description:

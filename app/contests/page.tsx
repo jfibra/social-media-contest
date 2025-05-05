@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Filter } from "lucide-react"
+import { Filter, RefreshCw } from "lucide-react"
 import ContestCard from "../components/contest-card"
 import { SITE_URL } from "../env"
 import type { Contest } from "@/types/contest"
@@ -11,70 +11,75 @@ export default function ContestsPage() {
   const [contests, setContests] = useState<Contest[]>([])
   const [loading, setLoading] = useState(true)
   const [filteredContests, setFilteredContests] = useState<Contest[]>([])
+  const [refreshing, setRefreshing] = useState(false)
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [startDateFilter, setStartDateFilter] = useState<string>("")
   const [endDateFilter, setEndDateFilter] = useState<string>("")
 
-  useEffect(() => {
-    async function fetchContests() {
-      try {
-        const response = await fetch(`/api/contests`)
-        if (!response.ok) {
-          throw new Error("Failed to fetch contests")
-        }
-        const data = await response.json()
-        setContests(data)
-        setFilteredContests(data)
-      } catch (error) {
-        console.error("Error fetching contests:", error)
-        // Use fallback contests
-        const fallbackContests = [
-          {
-            id: 1,
-            name: "Summer Promo Contest",
-            description: "Join our summer promo and win prizes!",
-            logoUrl: "/placeholder.svg?key=k3sr2",
-            posterUrl: "/placeholder.svg?key=oehvy",
-            startDate: "2025-05-01 00:00:00",
-            endDate: "2025-05-31 23:59:59",
-            status: "upcoming" as const,
-            visibility: "public" as const,
-            slug: "summer-promo-contest",
-          },
-          {
-            id: 2,
-            name: "Rainy Season Challenge",
-            description: "Share your rainy season adventures!",
-            logoUrl: "/placeholder.svg?key=xxard",
-            posterUrl: "/placeholder.svg?key=on8u6",
-            startDate: "2025-05-01 00:00:00",
-            endDate: "2025-05-31 23:59:59",
-            status: "upcoming" as const,
-            visibility: "public" as const,
-            slug: "rainy-season-challenge",
-          },
-          {
-            id: 3,
-            name: "Real Estate Quiz Competition",
-            description: "Test your knowledge about real estate and win exciting prizes.",
-            logoUrl: "/placeholder.svg?key=162nt",
-            posterUrl: "/placeholder.svg?key=f8omv",
-            startDate: "2025-04-01 00:00:00",
-            endDate: "2025-04-30 23:59:59",
-            status: "ended" as const,
-            visibility: "public" as const,
-            slug: "real-estate-quiz",
-          },
-        ]
-        setContests(fallbackContests)
-        setFilteredContests(fallbackContests)
-      } finally {
-        setLoading(false)
+  async function fetchContests() {
+    try {
+      setRefreshing(true)
+      // Add cache-busting query parameter
+      const timestamp = new Date().getTime()
+      const response = await fetch(`/api/contests?t=${timestamp}`)
+      if (!response.ok) {
+        throw new Error("Failed to fetch contests")
       }
+      const data = await response.json()
+      setContests(data)
+      setFilteredContests(data)
+    } catch (error) {
+      console.error("Error fetching contests:", error)
+      // Use fallback contests
+      const fallbackContests = [
+        {
+          id: 1,
+          name: "Summer Promo Contest",
+          description: "Join our summer promo and win prizes!",
+          logoUrl: "/placeholder.svg?key=k3sr2",
+          posterUrl: "/placeholder.svg?key=oehvy",
+          startDate: "2025-05-01 00:00:00",
+          endDate: "2025-05-31 23:59:59",
+          status: "upcoming" as const,
+          visibility: "public" as const,
+          slug: "summer-promo-contest",
+        },
+        {
+          id: 2,
+          name: "Rainy Season Challenge",
+          description: "Share your rainy season adventures!",
+          logoUrl: "/placeholder.svg?key=xxard",
+          posterUrl: "/placeholder.svg?key=on8u6",
+          startDate: "2025-05-01 00:00:00",
+          endDate: "2025-05-31 23:59:59",
+          status: "upcoming" as const,
+          visibility: "public" as const,
+          slug: "rainy-season-challenge",
+        },
+        {
+          id: 3,
+          name: "Real Estate Quiz Competition",
+          description: "Test your knowledge about real estate and win exciting prizes.",
+          logoUrl: "/placeholder.svg?key=162nt",
+          posterUrl: "/placeholder.svg?key=f8omv",
+          startDate: "2025-04-01 00:00:00",
+          endDate: "2025-04-30 23:59:59",
+          status: "ended" as const,
+          visibility: "public" as const,
+          slug: "real-estate-quiz",
+        },
+      ]
+      setContests(fallbackContests)
+      setFilteredContests(fallbackContests)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
+  }
 
+  useEffect(() => {
     fetchContests()
   }, [])
 
@@ -112,9 +117,19 @@ export default function ContestsPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8 opacity-0 animate-fadeIn">
-          <div className="flex items-center mb-4">
-            <Filter className="h-5 w-5 text-realty-primary mr-2" />
-            <h2 className="text-xl font-bold">Filter Contests</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Filter className="h-5 w-5 text-realty-primary mr-2" />
+              <h2 className="text-xl font-bold">Filter Contests</h2>
+            </div>
+            <button
+              onClick={fetchContests}
+              disabled={refreshing}
+              className="flex items-center px-4 py-2 bg-realty-primary text-white rounded-md hover:bg-realty-secondary transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -172,7 +187,7 @@ export default function ContestsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredContests.map((contest, index) => (
               <ContestCard
-                key={contest.id}
+                key={`${contest.id}-${index}`} // Add index to key to force re-render
                 contest={contest}
                 className={`opacity-0 animate-fadeIn animate-delay-${(index % 5) * 100}`}
               />

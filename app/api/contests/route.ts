@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { getAllContests } from "@/lib/api"
 
+export const dynamic = "force-dynamic" // Disable caching for this route
+
 export async function GET() {
   try {
     const contests = await getAllContests()
