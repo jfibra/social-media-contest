@@ -4,10 +4,13 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/auth-context"
+import { LogIn, LogOut, User } from "lucide-react"
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const { isAuthenticated, user, logout } = useAuth()
 
   // Track scroll position for subtle header effects
   useEffect(() => {
@@ -59,6 +62,37 @@ export default function Header() {
               <span>Contests</span>
               <span className="absolute bottom-0 left-0 w-full h-0.5 bg-realty-highlight scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
             </Link>
+
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/admin/dashboard"
+                  className="relative px-4 py-2 font-medium text-realty-primary hover:text-realty-highlight transition-colors duration-300 group"
+                >
+                  <span className="flex items-center">
+                    <User className="h-4 w-4 mr-1" />
+                    {user?.name}
+                  </span>
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-realty-highlight scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+                </Link>
+
+                <button
+                  onClick={() => logout()}
+                  className="ml-2 px-4 py-2 bg-red-600 text-white rounded-md font-medium hover:bg-red-700 transition-all duration-300 flex items-center"
+                >
+                  <LogOut className="h-4 w-4 mr-1" />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/auth/login"
+                className="ml-2 px-5 py-2 bg-realty-primary text-white rounded-md font-medium hover:bg-realty-secondary transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center"
+              >
+                <LogIn className="h-4 w-4 mr-1" />
+                Login
+              </Link>
+            )}
 
             <Link
               href="https://leuteriorealty.com"
@@ -123,6 +157,39 @@ export default function Header() {
               >
                 Contests
               </Link>
+
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    href="/admin/dashboard"
+                    className="px-4 py-3 font-medium text-realty-primary hover:text-realty-highlight transition-colors duration-300 border-b border-gray-100 flex items-center"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4 mr-1" />
+                    Dashboard
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      logout()
+                      setIsMobileMenuOpen(false)
+                    }}
+                    className="px-4 py-3 font-medium text-red-600 hover:text-red-800 transition-colors duration-300 border-b border-gray-100 flex items-center"
+                  >
+                    <LogOut className="h-4 w-4 mr-1" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  className="px-4 py-3 font-medium text-realty-primary hover:text-realty-highlight transition-colors duration-300 border-b border-gray-100 flex items-center"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <LogIn className="h-4 w-4 mr-1" />
+                  Login
+                </Link>
+              )}
 
               <Link
                 href="https://leuteriorealty.com"
