@@ -23,6 +23,8 @@ export const metadata: Metadata = {
     "social media contest",
     "Leuterio Realty",
     "property contest",
+    "real estate competition",
+    "Filipino Homes contest",
   ],
   authors: [{ name: "Leuterio Realty & Brokerage" }],
   creator: "Leuterio Realty & Brokerage",
@@ -58,6 +60,7 @@ export const metadata: Metadata = {
     description:
       "Join exciting social media contests hosted by Leuterio Realty & Brokerage. Win prizes and engage with top real estate professionals in the Philippines.",
     images: [`${SITE_URL}/images/og-image.png`],
+    creator: "@leuteriorealty",
   },
   robots: {
     index: true,
@@ -69,6 +72,9 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
+  },
+  verification: {
+    google: "verification_token", // Replace with actual verification token if available
   },
     generator: 'v0.dev'
 }

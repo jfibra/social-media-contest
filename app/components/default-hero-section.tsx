@@ -1,5 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
+import { ArrowRight } from "lucide-react"
 
 export default function DefaultHeroSection() {
   return (
@@ -10,9 +11,12 @@ export default function DefaultHeroSection() {
         style={{ backgroundImage: 'url("/images/pattern.png")', backgroundSize: "100px 100px" }}
       />
 
-      {/* Decorative Elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
+      {/* Animated Decorative Elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl animate-pulse"></div>
+      <div
+        className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl animate-pulse"
+        style={{ animationDelay: "1s" }}
+      ></div>
 
       <div className="container relative z-10 mx-auto px-4 pt-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -33,9 +37,10 @@ export default function DefaultHeroSection() {
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Link
                 href="/contests"
-                className="bg-realty-highlight hover:bg-opacity-90 text-white px-8 py-3 rounded-md font-medium text-center transition-all duration-300 transform hover:-translate-y-1 shadow-lg"
+                className="bg-realty-highlight hover:bg-opacity-90 text-white px-8 py-3 rounded-md font-medium text-center transition-all duration-300 transform hover:-translate-y-1 shadow-lg group"
               >
                 View All Contests
+                <ArrowRight className="inline-block ml-2 transition-transform group-hover:translate-x-1" />
               </Link>
               <a
                 href="https://leuteriorealty.com"
@@ -50,15 +55,30 @@ export default function DefaultHeroSection() {
 
           <div className="hidden lg:block relative">
             <div className="relative flex justify-center items-center">
+              {/* Animated Elements */}
+              <div
+                className="absolute -top-10 -left-10 w-20 h-20 bg-realty-highlight/30 rounded-full animate-bounce"
+                style={{ animationDuration: "3s" }}
+              ></div>
+              <div
+                className="absolute -bottom-5 -right-5 w-16 h-16 bg-white/20 rounded-full animate-bounce"
+                style={{ animationDuration: "2.5s", animationDelay: "0.5s" }}
+              ></div>
+
               {/* Default Image */}
               <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden shadow-2xl transform rotate-1 hover:rotate-0 transition-transform duration-500">
                 <Image
-                  src="/placeholder.svg?key=b48cv"
+                  src="/placeholder.svg?key=h8rb8"
                   alt="Real Estate Social Media Contests"
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 right-4 text-white">
+                  <p className="font-bold text-xl">Join Our Community</p>
+                  <p className="text-sm">Participate in exciting contests and win prizes</p>
+                </div>
               </div>
             </div>
           </div>

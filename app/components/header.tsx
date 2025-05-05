@@ -4,12 +4,10 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import { ChevronDown } from "lucide-react"
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
 
   // Track scroll position for subtle header effects
   useEffect(() => {
@@ -20,10 +18,6 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-
-  const toggleDropdown = (name: string) => {
-    setActiveDropdown(activeDropdown === name ? null : name)
-  }
 
   return (
     <header
@@ -58,50 +52,13 @@ export default function Header() {
               <span className="absolute bottom-0 left-0 w-full h-0.5 bg-realty-highlight scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
             </Link>
 
-            <div className="relative group">
-              <button
-                onClick={() => toggleDropdown("contests")}
-                className="flex items-center px-4 py-2 font-medium text-realty-primary hover:text-realty-highlight transition-colors duration-300 focus:outline-none"
-              >
-                <span>Contests</span>
-                <ChevronDown
-                  className={cn(
-                    "ml-1 h-4 w-4 transition-transform duration-200",
-                    activeDropdown === "contests" ? "rotate-180" : "",
-                  )}
-                />
-              </button>
-              <div
-                className={cn(
-                  "absolute top-full right-0 mt-1 w-48 bg-white rounded-md shadow-lg overflow-hidden transition-all duration-300 origin-top-right",
-                  activeDropdown === "contests" ? "scale-100 opacity-100" : "scale-95 opacity-0 pointer-events-none",
-                )}
-              >
-                <div className="py-1">
-                  <Link
-                    href="/contests"
-                    className="block px-4 py-2 text-sm text-realty-text hover:bg-realty-primary hover:text-white transition-colors duration-200"
-                    onClick={() => setActiveDropdown(null)}
-                  >
-                    All Contests
-                  </Link>
-                  <Link
-                    href="/contests?status=active"
-                    className="block px-4 py-2 text-sm text-realty-text hover:bg-realty-primary hover:text-white transition-colors duration-200"
-                    onClick={() => setActiveDropdown(null)}
-                  >
-                    Active Contests
-                  </Link>
-                  <Link
-                    href="/contests?status=upcoming"
-                    className="block px-4 py-2 text-sm text-realty-text hover:bg-realty-primary hover:text-white transition-colors duration-200"
-                    onClick={() => setActiveDropdown(null)}
-                  >
-                    Upcoming Contests
-                  </Link>
-                </div>
-              </div>
-            </div>
+            <Link
+              href="/contests"
+              className="relative px-4 py-2 font-medium text-realty-primary hover:text-realty-highlight transition-colors duration-300 group"
+            >
+              <span>Contests</span>
+              <span className="absolute bottom-0 left-0 w-full h-0.5 bg-realty-highlight scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+            </Link>
 
             <Link
               href="https://leuteriorealty.com"
@@ -159,49 +116,13 @@ export default function Header() {
                 Home
               </Link>
 
-              <div className="border-b border-gray-100">
-                <button
-                  onClick={() => toggleDropdown("mobileContests")}
-                  className="flex items-center justify-between w-full px-4 py-3 font-medium text-realty-primary hover:text-realty-highlight transition-colors duration-300"
-                >
-                  <span>Contests</span>
-                  <ChevronDown
-                    className={cn(
-                      "h-5 w-5 transition-transform duration-200",
-                      activeDropdown === "mobileContests" ? "rotate-180" : "",
-                    )}
-                  />
-                </button>
-
-                <div
-                  className={cn(
-                    "overflow-hidden transition-all duration-300",
-                    activeDropdown === "mobileContests" ? "max-h-40 opacity-100" : "max-h-0 opacity-0",
-                  )}
-                >
-                  <Link
-                    href="/contests"
-                    className="block pl-8 pr-4 py-2 text-realty-text hover:text-realty-highlight transition-colors duration-200"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    All Contests
-                  </Link>
-                  <Link
-                    href="/contests?status=active"
-                    className="block pl-8 pr-4 py-2 text-realty-text hover:text-realty-highlight transition-colors duration-200"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Active Contests
-                  </Link>
-                  <Link
-                    href="/contests?status=upcoming"
-                    className="block pl-8 pr-4 py-2 text-realty-text hover:text-realty-highlight transition-colors duration-200"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Upcoming Contests
-                  </Link>
-                </div>
-              </div>
+              <Link
+                href="/contests"
+                className="px-4 py-3 font-medium text-realty-primary hover:text-realty-highlight transition-colors duration-300 border-b border-gray-100"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Contests
+              </Link>
 
               <Link
                 href="https://leuteriorealty.com"

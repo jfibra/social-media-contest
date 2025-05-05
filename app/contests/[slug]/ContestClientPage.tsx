@@ -1,11 +1,15 @@
 "use client"
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Calendar, Share2, Trophy, FileText, AlertTriangle } from "lucide-react"
+import { Calendar, Share2, Trophy, FileText, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
 import { SITE_URL } from "@/app/env"
 import { getDateRange } from "@/lib/utils"
+import { submitContestEntry } from "@/app/actions/submit-contest-entry"
+import { isContestAcceptingSubmissions } from "@/lib/api"
 
 interface Contest {
+  id: number
   slug: string
   name: string
   description: string
@@ -24,25 +28,46 @@ interface ContestClientPageProps {
 }
 
 export default function ContestClientPage({ contest }: ContestClientPageProps) {
-  // Fallback rules and prizes if not provided by API
-  const rules =
-    contest.rules ||
-    `
-    1. Follow Leuterio Realty & Brokerage on social media platforms
-    2. Share the contest post on your timeline/feed
-    3. Tag three friends who might be interested in real estate
-    4. Use the hashtag #LeuterioRealtyContest in your post
-    5. Submit your entry through the form below
-  `
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionResult, setSubmissionResult] = useState<{ success: boolean; message: string } | null>(null)
 
-  const prizes =
-    contest.prizes ||
-    `
-    - First Prize: ₱10,000 cash
-    - Second Prize: ₱5,000 cash
-    - Third Prize: ₱3,000 cash
-    - 10 Consolation Prizes: Leuterio Realty merchandise
-  `
+  // Check if contest is accepting submissions
+  const acceptingSubmissions = isContestAcceptingSubmissions(contest)
+
+  // Handle form submission
+  async function handleSubmit(formData: FormData) {
+    if (!acceptingSubmissions) return
+
+    setIsSubmitting(true)
+    setSubmissionResult(null)
+
+    try {
+      const result = await submitContestEntry(contest.id, formData)
+      setSubmissionResult(result)
+
+      // Reset form if submission was successful
+      if (result.success) {
+        const form = document.getElementById("contest-form") as HTMLFormElement
+        if (form) form.reset()
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error)
+      setSubmissionResult({
+        success: false,
+        message: "An unexpected error occurred. Please try again later.",
+      })
+    } finally {
+      setIsSubmitting(false)
+
+      // Scroll to result message
+      setTimeout(() => {
+        const resultElement = document.getElementById("submission-result")
+        if (resultElement) {
+          resultElement.scrollIntoView({ behavior: "smooth", block: "center" })
+        }
+      }, 100)
+    }
+  }
 
   // Determine status badge color
   const statusColor =
@@ -112,23 +137,25 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
               <p className="text-lg">{contest.description}</p>
             </div>
 
+            {/* Contest Rules Section - Moved from below */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <div className="flex items-center mb-4">
                 <FileText className="h-6 w-6 text-realty-primary mr-2" />
                 <h2 className="text-2xl font-bold">Contest Rules</h2>
               </div>
-              <div className="prose max-w-none">
-                <p>{rules}</p>
+              <div className="prose max-w-none whitespace-pre-wrap">
+                <p>{contest.rules || "No rules specified for this contest."}</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6">
+            {/* Prizes Section - Moved from below */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <div className="flex items-center mb-4">
                 <Trophy className="h-6 w-6 text-realty-primary mr-2" />
                 <h2 className="text-2xl font-bold">Prizes</h2>
               </div>
-              <div className="prose max-w-none">
-                <p>{prizes}</p>
+              <div className="prose max-w-none whitespace-pre-wrap">
+                <p>{contest.prizes || "No prizes specified for this contest."}</p>
               </div>
             </div>
           </div>
@@ -145,38 +172,12 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
               </div>
 
               <div className="text-center mb-6">
-                <h3 className="text-xl font-bold mb-2">Join This Contest</h3>
-                <p className="text-realty-text mb-4">Participate now and get a chance to win amazing prizes!</p>
-
-                {contest.status === "active" && (
-                  <Link
-                    href="#participate-form"
-                    className="bg-realty-highlight hover:bg-opacity-90 text-white px-6 py-3 rounded-md font-medium block w-full text-center transition-all duration-300"
-                  >
-                    Participate Now
-                  </Link>
-                )}
-
-                {contest.status === "upcoming" && (
-                  <button
-                    className="bg-gray-400 text-white px-6 py-3 rounded-md font-medium block w-full text-center cursor-not-allowed"
-                    disabled
-                  >
-                    Coming Soon
-                  </button>
-                )}
-
-                {contest.status === "ended" && (
-                  <div className="bg-gray-100 text-realty-text px-6 py-3 rounded-md font-medium block w-full text-center">
-                    Contest Ended
-                  </div>
-                )}
-
-                {contest.status === "canceled" && (
-                  <div className="bg-red-100 text-red-700 px-6 py-3 rounded-md font-medium block w-full text-center">
-                    Contest Canceled
-                  </div>
-                )}
+                <h3 className="text-xl font-bold mb-2">Contest Information</h3>
+                <p className="text-realty-text mb-4">
+                  {acceptingSubmissions
+                    ? "This contest is currently accepting entries. Scroll down to participate!"
+                    : "This contest is not currently accepting entries."}
+                </p>
               </div>
 
               <div className="border-t border-gray-200 pt-6">
@@ -231,19 +232,41 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
           </div>
         </div>
 
-        {contest.status === "active" && (
+        {acceptingSubmissions && (
           <div id="participate-form" className="mt-16 opacity-0 animate-fadeIn animate-delay-300">
             <div className="bg-white rounded-lg shadow-md p-8">
               <h2 className="text-2xl font-bold mb-6 text-center">Participate in {contest.name}</h2>
-              <form className="max-w-2xl mx-auto">
+
+              {submissionResult && (
+                <div
+                  id="submission-result"
+                  className={`mb-6 p-4 rounded-md ${
+                    submissionResult.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+                  }`}
+                >
+                  <div className="flex items-start">
+                    {submissionResult.success ? (
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-0.5" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500 mr-3 mt-0.5" />
+                    )}
+                    <p className={submissionResult.success ? "text-green-700" : "text-red-700"}>
+                      {submissionResult.message}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <form id="contest-form" action={handleSubmit} className="max-w-2xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-realty-text mb-2">
-                      Full Name
+                    <label htmlFor="full_name" className="block text-sm font-medium text-realty-text mb-2">
+                      Full Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      id="name"
+                      id="full_name"
+                      name="full_name"
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
                       placeholder="John Doe"
                       required
@@ -251,11 +274,12 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
                   </div>
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-realty-text mb-2">
-                      Email Address
+                      Email Address <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="email"
                       id="email"
+                      name="email"
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
                       placeholder="john@example.com"
                       required
@@ -264,12 +288,13 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
                 </div>
 
                 <div className="mb-6">
-                  <label htmlFor="phone" className="block text-sm font-medium text-realty-text mb-2">
-                    Phone Number
+                  <label htmlFor="phone_number" className="block text-sm font-medium text-realty-text mb-2">
+                    Phone Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
-                    id="phone"
+                    id="phone_number"
+                    name="phone_number"
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
                     placeholder="+63 XXX XXX XXXX"
                     required
@@ -277,12 +302,13 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
                 </div>
 
                 <div className="mb-6">
-                  <label htmlFor="social-link" className="block text-sm font-medium text-realty-text mb-2">
-                    Social Media Post Link
+                  <label htmlFor="social_media_link" className="block text-sm font-medium text-realty-text mb-2">
+                    Social Media Post Link <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="url"
-                    id="social-link"
+                    id="social_media_link"
+                    name="social_media_link"
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
                     placeholder="https://facebook.com/your-post"
                     required
@@ -290,20 +316,50 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
                 </div>
 
                 <div className="mb-6">
-                  <label htmlFor="message" className="block text-sm font-medium text-realty-text mb-2">
-                    Why do you want to join this contest?
+                  <label htmlFor="initial_likes" className="block text-sm font-medium text-realty-text mb-2">
+                    Current Number of Likes <span className="text-red-500">*</span>
                   </label>
-                  <textarea
-                    id="message"
-                    rows={4}
+                  <input
+                    type="number"
+                    id="initial_likes"
+                    name="initial_likes"
+                    min="0"
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
-                    placeholder="Tell us why you're interested in this contest..."
-                  ></textarea>
+                    placeholder="Enter the current number of likes on your post"
+                    required
+                  />
+                </div>
+
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-blue-800">Important Submission Guidelines:</h4>
+                      <ul className="mt-1 text-sm text-blue-700 list-disc list-inside">
+                        <li>
+                          Make sure your social media post is set to <strong>public</strong>
+                        </li>
+                        <li>Include all required hashtags as specified in the contest rules</li>
+                        <li>Follow all contest rules carefully</li>
+                        <li>We will verify your post and the number of likes after submission</li>
+                        <li>Only one submission per person is allowed</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mb-6">
                   <label className="flex items-start">
-                    <input type="checkbox" className="mt-1 mr-2" required />
+                    <input type="checkbox" name="agree_terms" className="mt-1 mr-2" required />
                     <span className="text-sm text-realty-text">
                       I agree to the{" "}
                       <a href="#" className="text-realty-secondary hover:text-realty-primary">
@@ -312,7 +368,8 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
                       and{" "}
                       <a href="#" className="text-realty-secondary hover:text-realty-primary">
                         Privacy Policy
-                      </a>
+                      </a>{" "}
+                      <span className="text-red-500">*</span>
                     </span>
                   </label>
                 </div>
@@ -320,9 +377,10 @@ export default function ContestClientPage({ contest }: ContestClientPageProps) {
                 <div className="text-center">
                   <button
                     type="submit"
-                    className="bg-realty-highlight hover:bg-opacity-90 text-white px-8 py-3 rounded-md font-medium transition-all duration-300"
+                    disabled={isSubmitting}
+                    className="bg-realty-highlight hover:bg-opacity-90 text-white px-8 py-3 rounded-md font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Submit Entry
+                    {isSubmitting ? "Submitting..." : "Submit Entry"}
                   </button>
                 </div>
               </form>

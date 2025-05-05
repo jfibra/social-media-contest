@@ -31,6 +31,8 @@ export async function getActiveContest(): Promise<Contest | null> {
         endDate: contest.end_time,
         logoUrl: contest.logo_url,
         posterUrl: contest.poster_url,
+        rules: contest.contest_rules, // Map new field
+        prizes: contest.prizes, // Map new field
       }))
 
     // First try to find an active contest
@@ -83,9 +85,28 @@ export async function getAllContests(): Promise<Contest[]> {
         endDate: contest.end_time,
         logoUrl: contest.logo_url,
         posterUrl: contest.poster_url,
+        rules: contest.contest_rules, // Map new field
+        prizes: contest.prizes, // Map new field
       })) as unknown as Contest[]
   } catch (error) {
     console.error("Error fetching contests:", error)
     return []
   }
+}
+
+// Helper function to check if a contest is currently accepting submissions
+export function isContestAcceptingSubmissions(contest: Contest): boolean {
+  if (!contest) return false
+
+  const now = new Date()
+  const startDate = new Date(contest.startDate || contest.start_time)
+  const endDate = new Date(contest.endDate || contest.end_time)
+
+  // If contest is active, it's accepting submissions
+  if (contest.status === "active") return true
+
+  // If contest is upcoming but within date range, it's accepting submissions
+  if (contest.status === "upcoming" && now >= startDate && now <= endDate) return true
+
+  return false
 }
