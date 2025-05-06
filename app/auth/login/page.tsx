@@ -2,79 +2,46 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { Eye, EyeOff, AlertCircle, Info, User, ShieldCheck } from "lucide-react"
-import { API_BASE_URL } from "@/app/env"
+import dynamic from "next/dynamic"
+
+// Dynamically import SweetAlert2 to avoid SSR issues
+const Swal = dynamic(() => import("sweetalert2"), { ssr: false })
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [apiStatus, setApiStatus] = useState<{ status: string; message: string; url?: string } | null>(null)
-  const { login, error, clearError, isAdmin } = useAuth()
+  const [error, setError] = useState<string | null>(null)
+  const { login } = useAuth()
   const router = useRouter()
 
-  // Check API status on mount
-  useEffect(() => {
-    const checkApiStatus = async () => {
-      try {
-        const response = await fetch("/api/auth/status")
-        const data = await response.json()
-        setApiStatus(data)
-      } catch (error) {
-        setApiStatus({
-          status: "error",
-          message: "Could not connect to API status endpoint",
-        })
-      }
-    }
-
-    checkApiStatus()
-  }, [])
-
-  // Update the handleSubmit function to handle redirection after login
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    clearError()
+    setError(null)
 
     try {
-      console.log(`Attempting to login with email: ${email}`)
       const success = await login({ email, password })
 
-      if (success) {
-        // We need to check isAdmin after login is successful
-        const adminStatus = isAdmin
-        console.log(`Login successful, isAdmin: ${adminStatus}`)
-
-        // Redirect based on user role
-        if (adminStatus) {
-          router.push("/admin/dashboard")
-        } else {
-          router.push("/user/dashboard")
-        }
+      if (!success) {
+        // If login returns false but no error was shown via SweetAlert,
+        // show a generic error message
+        setError("Login failed. Please check your credentials and try again.")
       }
     } catch (error) {
       console.error("Login form error:", error)
+      setError("An unexpected error occurred. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  // For demo purposes, set demo credentials
-  const setAdminCredentials = () => {
-    setEmail("admin@example.com")
-    setPassword("password")
-  }
-
-  const setUserCredentials = () => {
-    setEmail("user@example.com")
-    setPassword("password")
   }
 
   return (
@@ -95,65 +62,11 @@ export default function LoginPage() {
 
           <h1 className="text-2xl font-bold text-center text-realty-primary mb-6">Login</h1>
 
-          {apiStatus && apiStatus.status === "error" && (
-            <div className="mb-6 p-4 rounded-md bg-yellow-50 border border-yellow-200">
-              <div className="flex items-start">
-                <Info className="h-5 w-5 text-yellow-500 mr-3 mt-0.5" />
-                <div>
-                  <p className="text-yellow-700">API Connection Issue</p>
-                  <p className="text-sm text-yellow-600 mt-1">{apiStatus.message}</p>
-                  {apiStatus.url && <p className="text-sm text-yellow-600 mt-1">Attempted URL: {apiStatus.url}</p>}
-                  <p className="text-sm text-yellow-600 mt-1">For testing purposes, you can use the demo accounts:</p>
-                  <div className="mt-2 flex flex-col sm:flex-row gap-2">
-                    <button
-                      type="button"
-                      onClick={setAdminCredentials}
-                      className="flex items-center justify-center px-3 py-1.5 bg-realty-primary text-white text-sm rounded"
-                    >
-                      <ShieldCheck className="h-4 w-4 mr-1" />
-                      Admin Demo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={setUserCredentials}
-                      className="flex items-center justify-center px-3 py-1.5 bg-realty-secondary text-white text-sm rounded"
-                    >
-                      <User className="h-4 w-4 mr-1" />
-                      User Demo
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {error && (
             <div className="mb-6 p-4 rounded-md bg-red-50 border border-red-200">
               <div className="flex items-start">
                 <AlertCircle className="h-5 w-5 text-red-500 mr-3 mt-0.5" />
-                <div>
-                  <p className="text-red-700">{error}</p>
-                  <p className="text-sm text-red-600 mt-1">API URL: {API_BASE_URL}</p>
-                  <p className="text-sm text-red-600 mt-1">For testing purposes, you can use the demo accounts:</p>
-                  <div className="mt-2 flex flex-col sm:flex-row gap-2">
-                    <button
-                      type="button"
-                      onClick={setAdminCredentials}
-                      className="flex items-center justify-center px-3 py-1.5 bg-realty-primary text-white text-sm rounded"
-                    >
-                      <ShieldCheck className="h-4 w-4 mr-1" />
-                      Admin Demo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={setUserCredentials}
-                      className="flex items-center justify-center px-3 py-1.5 bg-realty-secondary text-white text-sm rounded"
-                    >
-                      <User className="h-4 w-4 mr-1" />
-                      User Demo
-                    </button>
-                  </div>
-                </div>
+                <p className="text-red-700">{error}</p>
               </div>
             </div>
           )}
@@ -194,7 +107,25 @@ export default function LoginPage() {
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                      <path
+                        fillRule="evenodd"
+                        d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"
+                        clipRule="evenodd"
+                      />
+                      <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>

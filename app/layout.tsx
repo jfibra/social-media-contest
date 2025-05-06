@@ -6,8 +6,7 @@ import Header from "./components/header"
 import Footer from "./components/footer"
 import { SITE_URL } from "./env"
 import { AuthProvider } from "@/contexts/auth-context"
-// Import the AuthDebug component
-import AuthDebug from "@/components/auth-debug"
+import ScmSyncManager from "@/components/scm-sync-manager"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -82,7 +81,6 @@ export const metadata: Metadata = {
     generator: 'v0.dev'
 }
 
-// Add the AuthDebug component to the layout
 export default function RootLayout({
   children,
 }: {
@@ -95,7 +93,7 @@ export default function RootLayout({
           <Header />
           <main>{children}</main>
           <Footer />
-          <AuthDebug />
+          <ScmSyncManager />
         </AuthProvider>
       </body>
     </html>

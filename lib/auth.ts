@@ -53,11 +53,12 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
       const data = JSON.parse(responseText)
       console.log("Successfully parsed response as JSON")
 
-      if (data.success && data["0"]) {
-        // Handle the specific response structure from the API
+      // Check if the login was successful based on the response structure
+      if (data.success && data.apiResponse) {
         return {
           success: true,
-          data: data["0"],
+          apiResponse: data.apiResponse,
+          message: "Login successful",
         }
       } else {
         return {

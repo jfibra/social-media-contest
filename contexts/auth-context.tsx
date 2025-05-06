@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import type { AuthState, LoginCredentials, User, Member } from "@/types/auth"
 import { login, logout, getProfile, isAdmin } from "@/lib/auth"
+import { showErrorAlert, showSuccessAlert } from "@/lib/swal"
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>
@@ -23,6 +24,32 @@ const initialState: AuthState = {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+// Helper function to generate a random access token
+function generateAccessToken(length = 32) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  let token = ""
+  for (let i = 0; i < length; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return token
+}
+
+// Helper function to map roleId to role string
+function mapRoleIdToRole(roleId: number): string {
+  switch (roleId) {
+    case 1:
+      return "admin"
+    case 4:
+      return "agent"
+    case 6:
+      return "team leader"
+    case 7:
+      return "unit manager"
+    default:
+      return "agent" // Default to agent if unknown
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState)
@@ -130,16 +157,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           error: null,
         })
 
+        // Show success message
+        showSuccessAlert("Login successful!")
+
+        // Redirect based on role
+        if (isAdminUser) {
+          router.push("/admin/dashboard")
+        } else {
+          router.push("/user/dashboard")
+        }
+
         return true
       }
 
       // Regular login flow
       const response = await login(credentials)
 
-      if (response.success && response.data) {
-        // Extract user and token from the new response structure
-        const userData = response.data["0"] || {}
-        const authToken = response.data.authToken || ""
+      if (response.success && response.apiResponse) {
+        console.log("Login successful, processing user data:", response.apiResponse)
+
+        // Extract user data from the response
+        const userData = response.apiResponse
+
+        // Generate a random access token
+        const accessToken = generateAccessToken(32)
 
         // Create user object from the response
         const user: User = {
@@ -152,48 +193,167 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Create member object from the response
-        const member: Member = userData.details || {
-          id: userData.id || 0,
+        const member: Member = {
+          id: userData.details?.id || 0,
+          memberid: userData.details?.memberid || "",
           email: userData.email || "",
           name: userData.name || "",
-          membertype: userData.roleId === 1 ? "admin" : "user",
           status: "active",
         }
 
-        // Store token in localStorage
-        localStorage.setItem("auth_token", authToken)
+        // Determine role based on roleId
+        const roleId = userData.roleId || 4 // Default to agent (4) if not specified
+        const role = mapRoleIdToRole(roleId)
+        const isAdminUser = roleId === 1
+
+        // Store token in localStorage - do this immediately to ensure we're logged in
+        localStorage.setItem("auth_token", accessToken)
         localStorage.setItem("auth_user", JSON.stringify(user))
         localStorage.setItem("auth_member", JSON.stringify(member))
 
-        const adminStatus = user.role_id === 1 || member.membertype === "admin" || member.membertype === "superadmin"
-
+        // Update auth state
         setState({
           user,
           member,
-          token: authToken,
+          token: accessToken,
           isAuthenticated: true,
-          isAdmin: adminStatus,
+          isAdmin: isAdminUser,
           isLoading: false,
           error: null,
         })
 
+        // Create SCM access record - always check with the server
+        try {
+          console.log("=== SCM ACCESS CHECK STARTING ===")
+          console.log(`User authenticated: ${user.email}`)
+          const normalizedEmail = userData.email.toLowerCase().trim()
+
+          // Extract member ID safely
+          let memberIdValue = ""
+          try {
+            if (userData.details?.memberid) {
+              memberIdValue = userData.details.memberid.toString()
+            }
+          } catch (e) {
+            console.warn("Error extracting memberid:", e)
+          }
+
+          // Create a simplified SCM access record
+          const scmAccessData = {
+            email: normalizedEmail,
+            memberid: memberIdValue,
+            access_token: accessToken,
+            full_name: userData.name,
+            role: role,
+            status: "active",
+          }
+
+          console.log("SCM access data prepared:", scmAccessData)
+
+          // First check if the user already exists
+          console.log("Checking if user exists in SCM access database")
+          const checkUrl = `/api/auth/scm-access?email=${encodeURIComponent(normalizedEmail)}`
+
+          try {
+            const checkResponse = await fetch(checkUrl, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            })
+
+            console.log(`SCM access check response status: ${checkResponse.status}`)
+
+            if (checkResponse.status === 404) {
+              // User doesn't exist, create the record
+              console.log("User doesn't exist in SCM access, creating new record")
+
+              try {
+                const createResponse = await fetch("/api/auth/scm-access", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify(scmAccessData),
+                })
+
+                console.log(`SCM access creation response status: ${createResponse.status}`)
+
+                if (createResponse.ok) {
+                  console.log("SCM access record created successfully")
+
+                  try {
+                    const responseData = await createResponse.json()
+                    console.log("SCM access creation response data:", responseData)
+                  } catch (e) {
+                    console.error("Error parsing SCM access creation response:", e)
+                  }
+                } else {
+                  const errorText = await createResponse.text()
+                  console.error(`Failed to create SCM access record: ${errorText}`)
+                }
+              } catch (createError) {
+                console.error("Error creating SCM access record:", createError)
+              }
+            } else if (checkResponse.ok) {
+              console.log("User already exists in SCM access database")
+
+              try {
+                const checkData = await checkResponse.json()
+                console.log("Existing SCM access record:", checkData)
+              } catch (e) {
+                console.error("Error parsing SCM access check response:", e)
+              }
+            } else {
+              console.error(`Unexpected response when checking SCM access: ${checkResponse.status}`)
+            }
+          } catch (checkError) {
+            console.error("Error checking SCM access:", checkError)
+          }
+
+          console.log("=== SCM ACCESS CHECK COMPLETED ===")
+        } catch (scmError) {
+          console.error("Error handling SCM access record:", scmError)
+          // Don't block login for SCM access errors
+        }
+
+        // Show success message
+        showSuccessAlert("Login successful!")
+
+        // Redirect based on role
+        if (isAdminUser) {
+          router.push("/admin/dashboard")
+        } else {
+          router.push("/user/dashboard")
+        }
+
         return true
       } else {
-        setState((prev) => ({
-          ...prev,
+        console.error("Login failed:", response)
+
+        // Show error message with SweetAlert
+        const errorMessage = response.message || "Invalid credentials. Please try again."
+        showErrorAlert(errorMessage)
+
+        setState({
+          ...initialState,
           isLoading: false,
-          error: response.message || "Login failed",
-        }))
+          error: errorMessage,
+        })
 
         return false
       }
     } catch (error) {
       console.error("Login error:", error)
-      setState((prev) => ({
-        ...prev,
+
+      const errorMessage = "An unexpected error occurred. Please try again."
+      showErrorAlert(errorMessage)
+
+      setState({
+        ...initialState,
         isLoading: false,
-        error: "An unexpected error occurred. Please try again.",
-      }))
+        error: errorMessage,
+      })
 
       return false
     }
@@ -217,13 +377,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Reset state
       setState({ ...initialState, isLoading: false })
 
+      // Show success message
+      showSuccessAlert("You have been logged out successfully")
+
       // Redirect to login page
       router.push("/auth/login")
     }
   }
 
   const clearError = () => {
-    setState((prev) => ({ ...prev, error: null }))
+    if (state.error) {
+      setState((prev) => ({ ...prev, error: null }))
+    }
   }
 
   const value = {

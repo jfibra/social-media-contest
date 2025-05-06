@@ -36,6 +36,7 @@ export interface LoginCredentials {
 
 export interface LoginResponse {
   success: boolean
+  apiResponse?: any
   data?: any
   message?: string
 }
