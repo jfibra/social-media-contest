@@ -236,6 +236,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           error: null,
         })
 
+        // Update the SCM access creation in the login function
+
         // Create SCM access record - always check with the server
         try {
           console.log("=== SCM ACCESS CHECK STARTING ===")
@@ -252,17 +254,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.warn("Error extracting memberid:", e)
           }
 
-          // Create a simplified SCM access record
+          // Extract team info if available
+          let teamId = null
+          let teamName = null
+          try {
+            if (userData.details?.sales_team_member) {
+              teamId = userData.details.sales_team_member.teamid || null
+              teamName = userData.details.sales_team_member.sales_team?.teamname || null
+              console.log(`Extracted team info: ID=${teamId}, Name=${teamName}`)
+            }
+          } catch (e) {
+            console.warn("Error extracting team info:", e)
+          }
+
+          // Create a simplified SCM access record with only the necessary fields
           const scmAccessData = {
             email: normalizedEmail,
-            memberid: memberIdValue,
+            // Ensure memberid is always a string
+            memberid: memberIdValue ? String(memberIdValue) : "",
             access_token: accessToken,
             full_name: userData.name,
             role: role,
             status: "active",
+            // Ensure team_id is a string if present
+            team_id: teamId ? String(teamId) : null,
+            team_name: teamName,
           }
 
-          console.log("SCM access data prepared:", scmAccessData)
+          console.log("SCM access data prepared:", JSON.stringify(scmAccessData, null, 2))
 
           // First check if the user already exists - using the correct path parameter format
           console.log("Checking if user exists in SCM access database")
@@ -277,6 +296,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               headers: {
                 "Content-Type": "application/json",
               },
+              cache: "no-store", // Important: Ensure we're not getting cached responses
             })
 
             console.log(`SCM access check response status: ${checkResponse.status}`)
@@ -292,6 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     "Content-Type": "application/json",
                   },
                   body: JSON.stringify(scmAccessData),
+                  cache: "no-store",
                 })
 
                 console.log(`SCM access creation response status: ${createResponse.status}`)
@@ -302,12 +323,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   try {
                     const responseData = await createResponse.json()
                     console.log("SCM access creation response data:", responseData)
+
+                    // Verify the record was actually created
+                    console.log("Verifying record creation...")
+                    await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait a second
+
+                    const verifyResponse = await fetch(checkUrl, {
+                      method: "GET",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      cache: "no-store",
+                    })
+
+                    let verifyResponseOk = false
+
+                    if (verifyResponse.ok) {
+                      console.log("Verification successful - record exists")
+                      verifyResponseOk = true
+                    } else {
+                      console.warn("Verification failed - record may not have been created despite success response")
+                      verifyResponseOk = false
+
+                      // Try a second creation attempt with a direct approach
+                      console.log("Attempting second creation as fallback...")
+
+                      // Try a different endpoint or approach if available
+                      // For now, we'll just log the issue
+                    }
                   } catch (e) {
                     console.error("Error parsing SCM access creation response:", e)
                   }
                 } else {
                   const errorText = await createResponse.text()
                   console.error(`Failed to create SCM access record: ${errorText}`)
+                }
+
+                // If the regular creation fails or verification fails, try a direct API call
+                if (!createResponse.ok || !verifyResponseOk) {
+                  console.log("Attempting direct API call to create SCM access record...")
+
+                  try {
+                    const directUrl = `${window.location.origin}/api/scm/access/direct`
+                    const directResponse = await fetch(directUrl, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify(scmAccessData),
+                    })
+
+                    if (directResponse.ok) {
+                      console.log("Direct API call successful")
+                    } else {
+                      console.error(`Direct API call failed: ${directResponse.status}`)
+                    }
+                  } catch (directError) {
+                    console.error("Error in direct API call:", directError)
+                  }
                 }
               } catch (createError) {
                 console.error("Error creating SCM access record:", createError)

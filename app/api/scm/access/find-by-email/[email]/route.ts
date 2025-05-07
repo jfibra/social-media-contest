@@ -41,6 +41,32 @@ export async function GET(request: Request, { params }: { params: { email: strin
       // If user not found, API returns 404
       if (response.status === 404) {
         console.log(`User not found in SCM access database. Email: ${normalizedEmail}`)
+
+        // Try an alternative lookup method if available
+        try {
+          console.log("Attempting alternative lookup method...")
+          const altUrl = `${API_BASE_URL}/scm/access/by-email?email=${encodeURIComponent(normalizedEmail)}`
+          console.log(`Calling alternative API endpoint: ${altUrl}`)
+
+          const altResponse = await fetch(altUrl, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            cache: "no-store",
+          })
+
+          if (altResponse.ok) {
+            console.log("Alternative lookup found the user")
+            const altData = await altResponse.json()
+            return NextResponse.json({ success: true, exists: true, data: altData })
+          } else {
+            console.log("Alternative lookup also failed to find the user")
+          }
+        } catch (altError) {
+          console.error("Error in alternative lookup:", altError)
+        }
+
         return NextResponse.json({ success: false, exists: false, message: "User not found" }, { status: 404 })
       }
 

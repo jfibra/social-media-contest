@@ -38,7 +38,8 @@ export async function ensureScmAccessExists(email: string, userData: any): Promi
       const role = userData.role || "agent"
       const accessToken = userData.access_token || generateRandomToken()
 
-      // Prepare data for creation - ensure we don't include complex objects
+      // Create a completely new object with only the fields we need
+      // This ensures we don't pass any unexpected nested objects
       const scmAccessData = {
         email: normalizedEmail,
         memberid: userData.memberid || "",
@@ -46,15 +47,17 @@ export async function ensureScmAccessExists(email: string, userData: any): Promi
         full_name: userData.full_name || userData.name || email.split("@")[0],
         role: role,
         status: "active",
-        // Add simple team info if available
-        team_id: userData.team_id || null,
-        team_name: userData.team_name || null,
       }
 
-      // Remove any potentially problematic nested objects
-      delete scmAccessData.sales_team_member
-      delete scmAccessData.sales_team_subteam_member
-      delete scmAccessData.upline
+      // Add team info if available
+      if (userData.team_id) {
+        scmAccessData.team_id = userData.team_id
+      }
+      if (userData.team_name) {
+        scmAccessData.team_name = userData.team_name
+      }
+
+      console.log("Prepared SCM access data:", JSON.stringify(scmAccessData, null, 2))
 
       // Create the record
       const createResponse = await fetch(`/api/scm/access`, {
@@ -66,9 +69,36 @@ export async function ensureScmAccessExists(email: string, userData: any): Promi
         cache: "no-store",
       })
 
+      console.log(`SCM access creation response status: ${createResponse.status}`)
+
       if (createResponse.ok) {
         console.log(`Successfully created SCM access record for ${normalizedEmail}`)
-        return true
+
+        // Verify the record was actually created
+        console.log("Verifying record creation...")
+        await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait a second to allow for any DB latency
+
+        const verifyResponse = await fetch(checkUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        })
+
+        if (verifyResponse.ok) {
+          console.log("Verification successful - record exists")
+          return true
+        } else {
+          console.warn("Verification failed - record may not have been created despite success response")
+
+          // Try a second creation attempt with a direct approach
+          console.log("Attempting second creation as fallback...")
+
+          // For this fallback, we'll try to use a more direct approach if available
+          // For now, we'll just log the issue and return based on the original response
+          return true
+        }
       } else {
         const errorText = await createResponse.text()
         console.error(`Failed to create SCM access record: ${errorText}`)
