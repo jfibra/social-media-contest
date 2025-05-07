@@ -1,10 +1,4 @@
 /**
- * Utility functions for synchronizing SCM access records
- */
-
-import { API_BASE_URL } from "@/app/env"
-
-/**
  * Checks if a user exists in SCM access and creates a record if not
  * @param email User email
  * @param userData User data for creating SCM access
@@ -15,10 +9,13 @@ export async function ensureScmAccessExists(email: string, userData: any): Promi
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim()
 
-    // Check if user exists in SCM access using the new path parameter format
+    // Check if user exists in SCM access using the path parameter format
     console.log(`Checking if ${normalizedEmail} exists in SCM access`)
 
-    const checkUrl = `${API_BASE_URL}/scm/access/find-by-email/${encodeURIComponent(normalizedEmail)}`
+    // Use the correct endpoint format with path parameter
+    const checkUrl = `/api/scm/access/find-by-email/${encodeURIComponent(normalizedEmail)}`
+    console.log(`Calling API endpoint: ${checkUrl}`)
+
     const checkResponse = await fetch(checkUrl, {
       method: "GET",
       headers: {
@@ -51,7 +48,7 @@ export async function ensureScmAccessExists(email: string, userData: any): Promi
       }
 
       // Create the record
-      const createResponse = await fetch(`${API_BASE_URL}/scm/access`, {
+      const createResponse = await fetch(`/api/scm/access`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

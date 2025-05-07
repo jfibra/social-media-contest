@@ -250,9 +250,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           console.log("SCM access data prepared:", scmAccessData)
 
-          // First check if the user already exists
+          // First check if the user already exists - using the correct path parameter format
           console.log("Checking if user exists in SCM access database")
-          const checkUrl = `/api/auth/scm-access?email=${encodeURIComponent(normalizedEmail)}`
+
+          // Use the correct endpoint format with path parameter
+          const checkUrl = `/api/scm/access/find-by-email/${encodeURIComponent(normalizedEmail)}`
+          console.log(`Calling API endpoint: ${checkUrl}`)
 
           try {
             const checkResponse = await fetch(checkUrl, {
@@ -269,7 +272,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.log("User doesn't exist in SCM access, creating new record")
 
               try {
-                const createResponse = await fetch("/api/auth/scm-access", {
+                const createResponse = await fetch("/api/scm/access", {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
