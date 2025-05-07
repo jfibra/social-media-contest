@@ -43,3 +43,31 @@ export const showConfirmAlert = (title: string, text: string) => {
     cancelButtonColor: "#d33",
   })
 }
+
+export const showLoadingAlert = (title = "Processing") => {
+  return Swal.fire({
+    title,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading()
+    },
+  })
+}
+
+export const closeAlert = () => {
+  Swal.close()
+}
+
+export const showApiErrorAlert = (error: any) => {
+  let message = "An unexpected error occurred"
+
+  if (error instanceof Error) {
+    message = error.message
+  } else if (typeof error === "string") {
+    message = error
+  } else if (error && typeof error === "object" && "message" in error) {
+    message = String(error.message)
+  }
+
+  return showErrorAlert(message)
+}

@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import { API_BASE_URL } from "@/app/env"
-import { Plus, RefreshCw, Edit, Trash2, Eye } from "lucide-react"
+import { Plus, RefreshCw, Edit, Trash2, Eye, AlertCircle } from "lucide-react"
 import { formatDate } from "@/lib/utils"
+import { showConfirmAlert, showErrorAlert, showSuccessAlert } from "@/lib/swal"
 
 interface Contest {
   id: number
@@ -51,6 +52,7 @@ export default function UserContestsPage() {
 
       if (data.success && data["0"]) {
         setContests(data["0"])
+        setError(null)
       } else {
         // Fallback data for development
         setContests([
@@ -74,6 +76,7 @@ export default function UserContestsPage() {
     } catch (error) {
       console.error("Error fetching contests:", error)
       setError("Failed to load contests. Please try again later.")
+      showErrorAlert("Failed to load contests. Please try again later.")
 
       // Fallback data for development
       setContests([
@@ -101,7 +104,12 @@ export default function UserContestsPage() {
   }, [token, member, user])
 
   const handleDeleteContest = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this contest?")) {
+    const result = await showConfirmAlert(
+      "Delete Contest",
+      "Are you sure you want to delete this contest? This action cannot be undone.",
+    )
+
+    if (!result.isConfirmed) {
       return
     }
 
@@ -117,11 +125,14 @@ export default function UserContestsPage() {
         throw new Error(`Failed to delete contest: ${response.status}`)
       }
 
+      // Show success message
+      showSuccessAlert("Contest deleted successfully!")
+
       // Refresh the contests list
       fetchContests()
     } catch (error) {
       console.error("Error deleting contest:", error)
-      alert("Failed to delete contest. Please try again later.")
+      showErrorAlert("Failed to delete contest. Please try again later.")
     }
   }
 
@@ -168,12 +179,19 @@ export default function UserContestsPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-6 p-4 rounded-md bg-red-50 border border-red-200">
+            <div className="flex items-start">
+              <AlertCircle className="h-5 w-5 text-red-500 mr-3 mt-0.5" />
+              <p className="text-red-700">{error}</p>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-realty-primary"></div>
           </div>
-        ) : error ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">{error}</div>
         ) : contests.length > 0 ? (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="overflow-x-auto">

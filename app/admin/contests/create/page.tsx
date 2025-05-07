@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import ContestForm from "@/components/contest-form"
+import ContestStepper from "@/components/contest-stepper"
 import { ArrowLeft } from "lucide-react"
 
 export default function AdminCreateContestPage() {
@@ -23,7 +23,7 @@ export default function AdminCreateContestPage() {
           <p className="text-realty-text">Create a new social media contest for your team or event.</p>
         </div>
 
-        <ContestForm isAdmin={true} />
+        <ContestStepper isAdmin={true} />
       </div>
     </div>
   )
