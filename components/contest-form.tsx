@@ -2,11 +2,12 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { API_BASE_URL } from "@/app/env"
 import { useAuth } from "@/contexts/auth-context"
 import { AlertCircle, Loader2 } from "lucide-react"
+import { ensureScmAccessExists } from "@/lib/scm-sync"
 
 interface ContestFormProps {
   isAdmin?: boolean
@@ -18,6 +19,8 @@ export default function ContestForm({ isAdmin = false }: ContestFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [scmAccessId, setScmAccessId] = useState<number | null>(null)
+  const [scmAccessData, setScmAccessData] = useState<{ id: number; memberid: string } | null>(null)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -35,6 +38,61 @@ export default function ContestForm({ isAdmin = false }: ContestFormProps) {
     visibility: "public",
     status: "upcoming",
   })
+
+  // Fetch SCM access ID on component mount
+  useEffect(() => {
+    const fetchScmAccessId = async () => {
+      if (user?.email) {
+        try {
+          // First ensure the user has an SCM access record
+          const normalizedEmail = user.email.toLowerCase().trim()
+
+          // Prepare user data for SCM access
+          const userData = {
+            email: normalizedEmail,
+            name: user.name,
+            memberid: member?.memberid || member?.id || "",
+            role: member?.membertype || "agent",
+            full_name: user.name,
+          }
+
+          // Ensure SCM access exists
+          await ensureScmAccessExists(normalizedEmail, userData)
+
+          // Now fetch the SCM access ID
+          const response = await fetch(`/api/scm/access/find-by-email/${encodeURIComponent(normalizedEmail)}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            cache: "no-store",
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.data && data.data.id) {
+              console.log("Found SCM access ID:", data.data.id)
+              setScmAccessId(data.data.id)
+
+              // Store both id and memberid from scm_access
+              setScmAccessData({
+                id: data.data.id,
+                memberid: data.data.memberid || "",
+              })
+            } else {
+              console.error("SCM access record found but no ID in response:", data)
+            }
+          } else {
+            console.error("Failed to fetch SCM access ID:", response.status)
+          }
+        } catch (error) {
+          console.error("Error fetching SCM access ID:", error)
+        }
+      }
+    }
+
+    fetchScmAccessId()
+  }, [user, member])
 
   // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -68,6 +126,46 @@ export default function ContestForm({ isAdmin = false }: ContestFormProps) {
     setSuccess(null)
 
     try {
+      // Check if we have a valid SCM access ID
+      if (!scmAccessId) {
+        // Try to fetch it one more time
+        try {
+          const normalizedEmail = user?.email?.toLowerCase().trim() || ""
+          const response = await fetch(`/api/scm/access/find-by-email/${encodeURIComponent(normalizedEmail)}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            cache: "no-store",
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.data && data.data.id) {
+              console.log("Found SCM access ID on submit:", data.data.id)
+              setScmAccessId(data.data.id)
+
+              // Store both id and memberid from scm_access
+              setScmAccessData({
+                id: data.data.id,
+                memberid: data.data.memberid || "",
+              })
+            } else {
+              throw new Error("SCM access record found but no ID in response")
+            }
+          } else {
+            throw new Error(`Failed to fetch SCM access ID: ${response.status}`)
+          }
+        } catch (error) {
+          console.error("Error fetching SCM access ID on submit:", error)
+          setError(
+            "Unable to create contest: Your user account is not properly set up in the system. Please contact support.",
+          )
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       // Prepare the data
       const contestData = {
         ...formData,
@@ -81,16 +179,12 @@ export default function ContestForm({ isAdmin = false }: ContestFormProps) {
           : null,
         // Convert to number
         max_entries_per_user: Number.parseInt(formData.max_entries_per_user) || 1,
-        // Add user info
-        memberid: member?.id || user?.id,
-        created_by: user?.id,
+        // Use scmAccessData for both fields
+        memberid: scmAccessData?.memberid || "",
+        created_by: scmAccessData?.id || null,
       }
 
-      // For development/testing, use mock data if needed
-      if (process.env.NODE_ENV !== "production" && (!contestData.memberid || !contestData.created_by)) {
-        contestData.memberid = 999
-        contestData.created_by = 999
-      }
+      console.log("Submitting contest data:", contestData)
 
       // Send the request to create a contest
       const response = await fetch(`${API_BASE_URL}/scm/contests/create`, {
@@ -157,38 +251,7 @@ export default function ContestForm({ isAdmin = false }: ContestFormProps) {
       console.error("Error creating contest:", error)
       setError(error instanceof Error ? error.message : "An unexpected error occurred")
 
-      // For development/testing, provide a fallback success path
-      if (process.env.NODE_ENV !== "production") {
-        console.log("Development mode: Simulating successful contest creation")
-        setSuccess("Contest created successfully (development mode)!")
-
-        // Reset form
-        setFormData({
-          contest_name: "",
-          slug: "",
-          description: "",
-          contest_rules: "",
-          prizes: "",
-          logo_url: "",
-          poster_url: "",
-          start_time: "",
-          end_time: "",
-          entry_deadline: "",
-          max_entries_per_user: "1",
-          visibility: "public",
-          status: "upcoming",
-        })
-
-        // Redirect after a short delay
-        setTimeout(() => {
-          if (isAdmin) {
-            router.push("/admin/contests")
-          } else {
-            router.push("/user/contests")
-          }
-          router.refresh()
-        }, 2000)
-      }
+      // No fallback for production or development
     } finally {
       setIsSubmitting(false)
     }
