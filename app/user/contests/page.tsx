@@ -27,16 +27,73 @@ export default function UserContestsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [scmMemberId, setScmMemberId] = useState<string | null>(null)
+
+  // Function to get the SCM access memberid
+  const getScmMemberId = async () => {
+    try {
+      // First try to get from localStorage
+      const scmAccessData = localStorage.getItem("scm_access")
+      if (scmAccessData) {
+        try {
+          const scmAccess = JSON.parse(scmAccessData)
+          if (scmAccess.memberid) {
+            console.log("Using memberid from localStorage:", scmAccess.memberid)
+            setScmMemberId(scmAccess.memberid)
+            return scmAccess.memberid
+          }
+        } catch (e) {
+          console.error("Error parsing SCM access data from localStorage:", e)
+        }
+      }
+
+      // If not in localStorage, fetch from API
+      const email = user?.email
+      if (!email) {
+        throw new Error("User email not found")
+      }
+
+      console.log("Fetching SCM access data for email:", email)
+      const response = await fetch(`/api/scm/access/find-by-email/${encodeURIComponent(email)}`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        cache: "no-store",
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch SCM access data: ${response.status}`)
+      }
+
+      const data = await response.json()
+      if (data.success && data.data && data.data.memberid) {
+        console.log("Fetched memberid from API:", data.data.memberid)
+        // Store in localStorage for future use
+        localStorage.setItem("scm_access", JSON.stringify(data.data))
+        setScmMemberId(data.data.memberid)
+        return data.data.memberid
+      } else {
+        throw new Error("SCM access data does not contain memberid")
+      }
+    } catch (error) {
+      console.error("Error getting SCM memberid:", error)
+      return null
+    }
+  }
 
   const fetchContests = async () => {
     try {
       setRefreshing(true)
-      const memberId = member?.id || user?.id
+
+      // Get the correct memberid from SCM access
+      const memberId = await getScmMemberId()
 
       if (!memberId) {
-        throw new Error("User ID not found")
+        throw new Error("SCM Member ID not found. Please try logging in again.")
       }
 
+      console.log(`Fetching contests for SCM memberid: ${memberId}`)
       const response = await fetch(`${API_BASE_URL}/scm/contests/user/${memberId}`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -75,8 +132,8 @@ export default function UserContestsPage() {
       }
     } catch (error) {
       console.error("Error fetching contests:", error)
-      setError("Failed to load contests. Please try again later.")
-      showErrorAlert("Failed to load contests. Please try again later.")
+      setError(`Failed to load contests: ${error instanceof Error ? error.message : String(error)}`)
+      showErrorAlert(`Failed to load contests: ${error instanceof Error ? error.message : String(error)}`)
 
       // Fallback data for development
       setContests([

@@ -31,7 +31,7 @@ export default function AdminContestsPage() {
   const fetchContests = async () => {
     try {
       setRefreshing(true)
-      const response = await fetch(`${API_BASE_URL}/scm/contests/all-with-submissions`, {
+      const response = await fetch(`${API_BASE_URL}/scm/contests/all`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -65,24 +65,12 @@ export default function AdminContestsPage() {
               { id: 2, name: "Jane Smith", status: "approved" },
             ],
           },
-          {
-            id: 2,
-            contest_name: "Rainy Season Challenge",
-            slug: "rainy-season-challenge",
-            description: "Share your rainy season adventures!",
-            start_time: "2025-06-01 00:00:00",
-            end_time: "2025-06-30 23:59:59",
-            status: "upcoming",
-            visibility: "public",
-            created_at: "2025-05-15 10:00:00",
-            submissions: [],
-          },
         ])
       }
     } catch (error) {
       console.error("Error fetching contests:", error)
-      setError("Failed to load contests. Please try again later.")
-      showErrorAlert("Failed to load contests. Please try again later.")
+      setError(`Failed to load contests: ${error instanceof Error ? error.message : String(error)}`)
+      showErrorAlert(`Failed to load contests: ${error instanceof Error ? error.message : String(error)}`)
 
       // Fallback data for development
       setContests([
@@ -96,21 +84,6 @@ export default function AdminContestsPage() {
           status: "upcoming",
           visibility: "public",
           created_at: "2025-04-15 10:00:00",
-          submissions: [
-            { id: 1, name: "John Doe", status: "pending" },
-            { id: 2, name: "Jane Smith", status: "approved" },
-          ],
-        },
-        {
-          id: 2,
-          contest_name: "Rainy Season Challenge",
-          slug: "rainy-season-challenge",
-          description: "Share your rainy season adventures!",
-          start_time: "2025-06-01 00:00:00",
-          end_time: "2025-06-30 23:59:59",
-          status: "upcoming",
-          visibility: "public",
-          created_at: "2025-05-15 10:00:00",
           submissions: [],
         },
       ])
@@ -178,8 +151,8 @@ export default function AdminContestsPage() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold">Manage Contests</h1>
-            <p className="text-realty-text">Create and manage social media contests for your team or events.</p>
+            <h1 className="text-2xl font-bold">All Contests</h1>
+            <p className="text-realty-text">Manage all social media contests across the platform.</p>
           </div>
           <div className="flex gap-4">
             <button
@@ -307,13 +280,13 @@ export default function AdminContestsPage() {
         ) : (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <h2 className="text-xl font-semibold mb-4">No Contests Found</h2>
-            <p className="text-realty-text mb-6">You haven't created any contests yet.</p>
+            <p className="text-realty-text mb-6">No contests have been created yet.</p>
             <Link
               href="/admin/contests/create"
               className="inline-flex items-center px-4 py-2 bg-realty-primary text-white rounded-md hover:bg-realty-secondary transition-colors"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Your First Contest
+              Create First Contest
             </Link>
           </div>
         )}
