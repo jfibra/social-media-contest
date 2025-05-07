@@ -199,19 +199,62 @@ export function isAdmin(): boolean {
   if (typeof window === "undefined") return false
 
   try {
-    const user = localStorage.getItem("auth_user")
-    if (!user) return false
-
-    const userData = JSON.parse(user)
+    // First check the member data which has the most accurate role information
     const member = localStorage.getItem("auth_member")
-
     if (member) {
       const memberData = JSON.parse(member)
-      return memberData.membertype === "admin" || memberData.membertype === "superadmin"
+      // Check both membertype and role fields to be thorough
+      if (memberData.membertype) {
+        const memberType = memberData.membertype.toLowerCase()
+        if (memberType === "admin" || memberType === "superadmin") {
+          return true
+        }
+      }
+
+      // Also check role field if it exists
+      if (memberData.role) {
+        const role = memberData.role.toLowerCase()
+        if (role === "admin" || role === "superadmin") {
+          return true
+        }
+      }
     }
 
-    // Fallback to role_id if available
-    return userData.role_id === 1
+    // Fallback to user data if member data doesn't have role info
+    const user = localStorage.getItem("auth_user")
+    if (user) {
+      const userData = JSON.parse(user)
+      // Check role_id (1 is typically admin)
+      if (userData.role_id === 1) {
+        return true
+      }
+
+      // Also check if there's a role field
+      if (userData.role) {
+        const role = typeof userData.role === "string" ? userData.role.toLowerCase() : ""
+        if (role === "admin" || role === "superadmin") {
+          return true
+        }
+      }
+    }
+
+    // Check SCM access data as a final fallback
+    const scmAccess = localStorage.getItem("scm_access")
+    if (scmAccess) {
+      try {
+        const scmData = JSON.parse(scmAccess)
+        if (scmData.role) {
+          const role = scmData.role.toLowerCase()
+          if (role === "admin" || role === "superadmin") {
+            return true
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing SCM access data:", e)
+      }
+    }
+
+    return false
   } catch (error) {
     console.error("Error checking admin status:", error)
     return false

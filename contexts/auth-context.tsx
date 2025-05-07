@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth()
   }, [])
 
-  // Update the handleLogin function to handle the new response structure
+  // Update the handleLogin function to properly check admin status and redirect
   const handleLogin = async (credentials: LoginCredentials): Promise<boolean> => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }))
 
@@ -199,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: userData.email || "",
           name: userData.name || "",
           status: userData.details?.status || "active",
+          membertype: userData.details?.membertype || userData.role || "user",
         }
 
         // Store team information separately if needed
@@ -215,10 +216,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem("auth_team_info", JSON.stringify(teamInfo))
         }
 
-        // Determine role based on roleId
+        // Determine role based on roleId or explicit role field
         const roleId = userData.roleId || 4 // Default to agent (4) if not specified
-        const role = mapRoleIdToRole(roleId)
-        const isAdminUser = roleId === 1
+        const role = userData.role || mapRoleIdToRole(roleId)
+
+        // Check if user is admin based on role or membertype
+        const isAdminUser =
+          role.toLowerCase() === "admin" ||
+          role.toLowerCase() === "superadmin" ||
+          roleId === 1 ||
+          (userData.details?.membertype && ["admin", "superadmin"].includes(userData.details.membertype.toLowerCase()))
+
+        console.log("User role information:", {
+          roleId,
+          role,
+          membertype: userData.details?.membertype,
+          isAdmin: isAdminUser,
+        })
 
         // Store token in localStorage - do this immediately to ensure we're logged in
         localStorage.setItem("auth_token", accessToken)
@@ -235,8 +249,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isLoading: false,
           error: null,
         })
-
-        // Update the SCM access creation in the login function
 
         // Create SCM access record - always check with the server
         try {
@@ -282,6 +294,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           console.log("SCM access data prepared:", JSON.stringify(scmAccessData, null, 2))
+
+          // Store SCM access data in localStorage for reference
+          localStorage.setItem("scm_access", JSON.stringify(scmAccessData))
 
           // First check if the user already exists - using the correct path parameter format
           console.log("Checking if user exists in SCM access database")
@@ -391,6 +406,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               try {
                 const checkData = await checkResponse.json()
                 console.log("Existing SCM access record:", checkData)
+
+                // Store the SCM access data from the server
+                if (checkData.data) {
+                  localStorage.setItem("scm_access", JSON.stringify(checkData.data))
+
+                  // Update isAdmin state if the SCM access record indicates admin role
+                  if (checkData.data.role) {
+                    const scmRole = checkData.data.role.toLowerCase()
+                    if (scmRole === "admin" || scmRole === "superadmin") {
+                      setState((prev) => ({
+                        ...prev,
+                        isAdmin: true,
+                      }))
+                    }
+                  }
+                }
               } catch (e) {
                 console.error("Error parsing SCM access check response:", e)
               }
@@ -410,8 +441,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Show success message
         showSuccessAlert("Login successful!")
 
-        // Redirect based on role
-        if (isAdminUser) {
+        // Double-check admin status using the isAdmin() function
+        const adminStatus = isAdmin()
+        console.log("Final admin status check:", adminStatus)
+
+        // Redirect based on role - use the adminStatus from isAdmin() for consistency
+        if (adminStatus) {
           router.push("/admin/dashboard")
         } else {
           router.push("/user/dashboard")

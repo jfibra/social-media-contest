@@ -7,6 +7,7 @@ import Footer from "./components/footer"
 import { SITE_URL } from "./env"
 import { AuthProvider } from "@/contexts/auth-context"
 import ScmSyncManager from "@/components/scm-sync-manager"
+import AdminDebug from "@/components/admin-debug"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -94,6 +95,7 @@ export default function RootLayout({
           <main>{children}</main>
           <Footer />
           <ScmSyncManager />
+          {process.env.NODE_ENV !== "production" && <AdminDebug />}
         </AuthProvider>
       </body>
     </html>

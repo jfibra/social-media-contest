@@ -10,7 +10,7 @@ import { LogIn, LogOut, User } from "lucide-react"
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, isAdmin, user, logout } = useAuth()
 
   // Track scroll position for subtle header effects
   useEffect(() => {
@@ -21,6 +21,9 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  // Determine dashboard link based on admin status
+  const dashboardLink = isAdmin ? "/admin/dashboard" : "/user/dashboard"
 
   return (
     <header
@@ -66,12 +69,12 @@ export default function Header() {
             {isAuthenticated ? (
               <>
                 <Link
-                  href="/admin/dashboard"
+                  href={dashboardLink}
                   className="relative px-4 py-2 font-medium text-realty-primary hover:text-realty-highlight transition-colors duration-300 group"
                 >
                   <span className="flex items-center">
                     <User className="h-4 w-4 mr-1" />
-                    {user?.name}
+                    {isAdmin ? "Admin Dashboard" : user?.name}
                   </span>
                   <span className="absolute bottom-0 left-0 w-full h-0.5 bg-realty-highlight scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
                 </Link>
@@ -161,12 +164,12 @@ export default function Header() {
               {isAuthenticated ? (
                 <>
                   <Link
-                    href="/admin/dashboard"
+                    href={dashboardLink}
                     className="px-4 py-3 font-medium text-realty-primary hover:text-realty-highlight transition-colors duration-300 border-b border-gray-100 flex items-center"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <User className="h-4 w-4 mr-1" />
-                    Dashboard
+                    {isAdmin ? "Admin Dashboard" : "Dashboard"}
                   </Link>
 
                   <button
