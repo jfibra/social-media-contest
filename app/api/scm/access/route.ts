@@ -57,9 +57,25 @@ export async function POST(request: Request) {
       status: body.status || "active",
     }
 
-    // Remove any potentially problematic fields
+    // Remove any potentially problematic fields or complex objects
     delete safeBody.team
     delete safeBody.subteam
+    delete safeBody.sales_team_member
+    delete safeBody.sales_team_subteam_member
+    delete safeBody.upline
+
+    // If we have team info, store it as simple properties
+    if (body.sales_team_member) {
+      try {
+        safeBody.team_id = body.sales_team_member.teamid || null
+        safeBody.team_name = body.sales_team_member.sales_team?.teamname || null
+      } catch (e) {
+        console.warn("Error extracting team info:", e)
+      }
+    }
+
+    // Log the sanitized body for debugging
+    console.log("Sanitized body for SCM access creation:", JSON.stringify(safeBody))
 
     // Implement retry logic for network errors
     const maxRetries = 3

@@ -198,7 +198,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           memberid: userData.details?.memberid || "",
           email: userData.email || "",
           name: userData.name || "",
-          status: "active",
+          status: userData.details?.status || "active",
+        }
+
+        // Store team information separately if needed
+        const hasTeam = !!userData.details?.sales_team_member
+        const teamInfo = hasTeam
+          ? {
+              teamId: userData.details?.sales_team_member?.teamid,
+              teamName: userData.details?.sales_team_member?.sales_team?.teamname,
+            }
+          : null
+
+        // Add this to localStorage if needed
+        if (teamInfo) {
+          localStorage.setItem("auth_team_info", JSON.stringify(teamInfo))
         }
 
         // Determine role based on roleId

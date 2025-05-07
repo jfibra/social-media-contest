@@ -38,6 +38,7 @@ export async function ensureScmAccessExists(email: string, userData: any): Promi
       const role = userData.role || "agent"
       const accessToken = userData.access_token || generateRandomToken()
 
+      // Prepare data for creation - ensure we don't include complex objects
       const scmAccessData = {
         email: normalizedEmail,
         memberid: userData.memberid || "",
@@ -45,7 +46,15 @@ export async function ensureScmAccessExists(email: string, userData: any): Promi
         full_name: userData.full_name || userData.name || email.split("@")[0],
         role: role,
         status: "active",
+        // Add simple team info if available
+        team_id: userData.team_id || null,
+        team_name: userData.team_name || null,
       }
+
+      // Remove any potentially problematic nested objects
+      delete scmAccessData.sales_team_member
+      delete scmAccessData.sales_team_subteam_member
+      delete scmAccessData.upline
 
       // Create the record
       const createResponse = await fetch(`/api/scm/access`, {
