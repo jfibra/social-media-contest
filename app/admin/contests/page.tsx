@@ -31,7 +31,8 @@ export default function AdminContestsPage() {
   const fetchContests = async () => {
     try {
       setRefreshing(true)
-      const response = await fetch(`${API_BASE_URL}/scm/contests/all`, {
+      // Using the correct API endpoint for fetching contests with submissions
+      const response = await fetch(`${API_BASE_URL}/scm/contests/all-with-submissions`, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -151,8 +152,8 @@ export default function AdminContestsPage() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold">All Contests</h1>
-            <p className="text-realty-text">Manage all social media contests across the platform.</p>
+            <h1 className="text-2xl font-bold">Manage Contests</h1>
+            <p className="text-realty-text">Create and manage social media contests for your team or events.</p>
           </div>
           <div className="flex gap-4">
             <button
@@ -280,13 +281,13 @@ export default function AdminContestsPage() {
         ) : (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <h2 className="text-xl font-semibold mb-4">No Contests Found</h2>
-            <p className="text-realty-text mb-6">No contests have been created yet.</p>
+            <p className="text-realty-text mb-6">You haven't created any contests yet.</p>
             <Link
               href="/admin/contests/create"
               className="inline-flex items-center px-4 py-2 bg-realty-primary text-white rounded-md hover:bg-realty-secondary transition-colors"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create First Contest
+              Create Your First Contest
             </Link>
           </div>
         )}

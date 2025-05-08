@@ -6,8 +6,10 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { API_BASE_URL } from "@/app/env"
 import { useAuth } from "@/contexts/auth-context"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { AlertCircle, Loader2, ImageIcon } from "lucide-react"
 import { ensureScmAccessExists } from "@/lib/scm-sync"
+import { LogoSelector } from "./logo-selector"
+import { Button } from "@/components/ui/button"
 
 interface ContestFormProps {
   isAdmin?: boolean
@@ -363,6 +365,14 @@ export default function ContestForm({ isAdmin = false }: ContestFormProps) {
             <label htmlFor="logo_url" className="block text-sm font-medium text-realty-text mb-2">
               Logo URL
             </label>
+            <div className="flex gap-2 mb-2">
+              <LogoSelector type="company" onSelectLogo={(url) => setFormData({ ...formData, logo_url: url })} />
+              {/* Team logo selector will be implemented later */}
+              <Button type="button" variant="outline" className="flex items-center gap-2" disabled>
+                <ImageIcon className="h-4 w-4" />
+                Team Logo
+              </Button>
+            </div>
             <input
               type="url"
               id="logo_url"

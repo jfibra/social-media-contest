@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { AlertCircle, Loader2, CheckCircle, ArrowLeft, ArrowRight } from "lucide-react"
 import { ensureScmAccessExists } from "@/lib/scm-sync"
 import { showErrorAlert, showSuccessAlert } from "@/lib/swal"
+import { ContestStepThree } from "./contest-step-three"
 
 interface ContestStepperProps {
   isAdmin?: boolean
@@ -150,6 +151,13 @@ export default function ContestStepper({ isAdmin = false }: ContestStepperProps)
         [name]: value,
       })
     }
+  }
+
+  const updateFormData = (newData: Partial<typeof formData>) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      ...newData,
+    }))
   }
 
   // Navigate to next step
@@ -432,88 +440,7 @@ export default function ContestStepper({ isAdmin = false }: ContestStepperProps)
           </div>
         )
       case 3:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-semibold">Dates and Images</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="logo_url" className="block text-sm font-medium text-realty-text mb-2">
-                  Logo URL
-                </label>
-                <input
-                  type="url"
-                  id="logo_url"
-                  name="logo_url"
-                  value={formData.logo_url}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
-                  placeholder="https://example.com/logo.png"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="poster_url" className="block text-sm font-medium text-realty-text mb-2">
-                  Poster URL
-                </label>
-                <input
-                  type="url"
-                  id="poster_url"
-                  name="poster_url"
-                  value={formData.poster_url}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
-                  placeholder="https://example.com/poster.png"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label htmlFor="start_time" className="block text-sm font-medium text-realty-text mb-2">
-                  Start Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  id="start_time"
-                  name="start_time"
-                  value={formData.start_time}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="end_time" className="block text-sm font-medium text-realty-text mb-2">
-                  End Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  id="end_time"
-                  name="end_time"
-                  value={formData.end_time}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="entry_deadline" className="block text-sm font-medium text-realty-text mb-2">
-                  Entry Deadline
-                </label>
-                <input
-                  type="datetime-local"
-                  id="entry_deadline"
-                  name="entry_deadline"
-                  value={formData.entry_deadline}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-realty-primary"
-                />
-              </div>
-            </div>
-          </div>
-        )
+        return <ContestStepThree formData={formData} updateFormData={updateFormData} />
       case 4:
         return (
           <div className="space-y-6">
