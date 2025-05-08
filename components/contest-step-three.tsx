@@ -6,6 +6,7 @@ import { useState } from "react"
 import { ImageIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { FileUploader } from "./file-uploader"
 
 interface ContestStepThreeProps {
   formData: any
@@ -112,6 +113,19 @@ export function ContestStepThree({ formData, updateFormData }: ContestStepThreeP
     setTeamLogoDialogOpen(false)
   }
 
+  const handleLogoUploadComplete = (url: string) => {
+    updateFormData({ ...formData, logo_url: url })
+  }
+
+  const handlePosterUploadComplete = (url: string) => {
+    updateFormData({ ...formData, poster_url: url })
+  }
+
+  // Get sanitized contest name for file uploads
+  const getUploadFileName = () => {
+    return formData.contest_name ? formData.contest_name.replace(/[^A-Za-z0-9-]/g, "_") : "contest"
+  }
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Dates and Images</h2>
@@ -121,7 +135,25 @@ export function ContestStepThree({ formData, updateFormData }: ContestStepThreeP
           <label htmlFor="logo_url" className="block text-sm font-medium text-realty-text mb-2">
             Logo URL
           </label>
-          <div className="flex gap-2 mb-2">
+
+          {/* Logo Preview */}
+          {formData.logo_url && (
+            <div className="mb-3 p-2 border rounded-md bg-gray-50">
+              <div className="text-xs text-gray-500 mb-1">Logo Preview:</div>
+              <div className="h-24 flex items-center justify-center bg-white rounded border">
+                <img
+                  src={formData.logo_url || "/placeholder.svg"}
+                  alt="Logo Preview"
+                  className="max-h-20 max-w-full object-contain"
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).src = "/abstract-logo.png"
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2 mb-2">
             <Button
               type="button"
               variant="outline"
@@ -140,6 +172,7 @@ export function ContestStepThree({ formData, updateFormData }: ContestStepThreeP
               <ImageIcon className="h-4 w-4" />
               Team Logo
             </Button>
+            <FileUploader type="logo" onUploadComplete={handleLogoUploadComplete} fileName={getUploadFileName()} />
           </div>
           <input
             type="url"
@@ -156,6 +189,27 @@ export function ContestStepThree({ formData, updateFormData }: ContestStepThreeP
           <label htmlFor="poster_url" className="block text-sm font-medium text-realty-text mb-2">
             Poster URL
           </label>
+
+          {/* Poster Preview */}
+          {formData.poster_url && (
+            <div className="mb-3 p-2 border rounded-md bg-gray-50">
+              <div className="text-xs text-gray-500 mb-1">Poster Preview:</div>
+              <div className="h-24 flex items-center justify-center bg-white rounded border">
+                <img
+                  src={formData.poster_url || "/placeholder.svg"}
+                  alt="Poster Preview"
+                  className="max-h-20 max-w-full object-contain"
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).src = "/abstract-logo.png"
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 mb-2">
+            <FileUploader type="poster" onUploadComplete={handlePosterUploadComplete} fileName={getUploadFileName()} />
+          </div>
           <input
             type="url"
             id="poster_url"
@@ -233,7 +287,6 @@ export function ContestStepThree({ formData, updateFormData }: ContestStepThreeP
                     alt={`Logo ${index + 1}`}
                     className="max-w-full max-h-full object-contain p-2"
                     onError={(e) => {
-                      // If image fails to load, show a placeholder
                       ;(e.target as HTMLImageElement).src = "/abstract-logo.png"
                     }}
                   />
@@ -264,7 +317,6 @@ export function ContestStepThree({ formData, updateFormData }: ContestStepThreeP
                     alt={`Logo ${index + 1}`}
                     className="max-w-full max-h-full object-contain p-2"
                     onError={(e) => {
-                      // If image fails to load, show a placeholder
                       ;(e.target as HTMLImageElement).src = "/abstract-logo.png"
                     }}
                   />
