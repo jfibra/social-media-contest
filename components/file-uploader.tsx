@@ -37,11 +37,18 @@ export function FileUploader({ onUploadComplete, type, fileName }: FileUploaderP
         formData.append("poster_name", `${fileName}_poster`)
       }
 
+      // Ensure we're using HTTPS for the API endpoint
+      let apiBaseUrl = NEXT_PUBLIC_API_BASE_URL_2
+
+      // Force HTTPS if not already using it
+      if (apiBaseUrl.startsWith("http:")) {
+        apiBaseUrl = apiBaseUrl.replace("http:", "https:")
+      }
+
       // Determine the endpoint based on type
-      const endpoint =
-        type === "logo"
-          ? `${NEXT_PUBLIC_API_BASE_URL_2}/upload-developer-logo`
-          : `${NEXT_PUBLIC_API_BASE_URL_2}/upload-poster-photos`
+      const endpoint = type === "logo" ? `${apiBaseUrl}/upload-developer-logo` : `${apiBaseUrl}/upload-poster-photos`
+
+      console.log(`Uploading ${type} to endpoint: ${endpoint}`)
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -49,13 +56,19 @@ export function FileUploader({ onUploadComplete, type, fileName }: FileUploaderP
       })
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`)
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
 
       if (data.url) {
-        onUploadComplete(data.url)
+        // Ensure the returned URL is also HTTPS
+        let secureUrl = data.url
+        if (secureUrl.startsWith("http:")) {
+          secureUrl = secureUrl.replace("http:", "https:")
+        }
+
+        onUploadComplete(secureUrl)
         setSuccess(true)
       } else {
         throw new Error("No URL returned from server")
