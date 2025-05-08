@@ -6,7 +6,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { API_BASE_URL } from "@/app/env"
 import { Plus, RefreshCw, Edit, Trash2, Eye, AlertCircle } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-import { showConfirmAlert, showErrorAlert, showSuccessAlert } from "@/lib/swal"
+import { showErrorAlert, showSuccessAlert } from "@/lib/swal"
+import { ConfirmationModal } from "@/components/confirmation-modal"
 
 interface Contest {
   id: number
@@ -28,6 +29,11 @@ export default function UserContestsPage() {
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [scmMemberId, setScmMemberId] = useState<string | null>(null)
+
+  // State for delete confirmation modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [contestToDelete, setContestToDelete] = useState<Contest | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Function to get the SCM access memberid
   const getScmMemberId = async () => {
@@ -123,10 +129,7 @@ export default function UserContestsPage() {
             status: "upcoming",
             visibility: "public",
             created_at: "2025-04-15 10:00:00",
-            submissions: [
-              { id: 1, name: "John Doe", status: "pending" },
-              { id: 2, name: "Jane Smith", status: "approved" },
-            ],
+            submissions: [],
           },
         ])
       }
@@ -160,20 +163,23 @@ export default function UserContestsPage() {
     fetchContests()
   }, [token, member, user])
 
-  const handleDeleteContest = async (id: number) => {
-    const result = await showConfirmAlert(
-      "Delete Contest",
-      "Are you sure you want to delete this contest? This action cannot be undone.",
-    )
+  // Function to open delete confirmation modal
+  const openDeleteModal = (contest: Contest) => {
+    setContestToDelete(contest)
+    setIsDeleteModalOpen(true)
+  }
 
-    if (!result.isConfirmed) {
-      return
-    }
+  // Function to handle contest deletion
+  const handleDeleteContest = async () => {
+    if (!contestToDelete) return
+
+    setIsDeleting(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/scm/contests/${id}/delete`, {
+      const response = await fetch(`${API_BASE_URL}/scm/contests/${contestToDelete.id}/delete`, {
         method: "DELETE",
         headers: {
+          "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       })
@@ -182,6 +188,10 @@ export default function UserContestsPage() {
         throw new Error(`Failed to delete contest: ${response.status}`)
       }
 
+      // Close the modal
+      setIsDeleteModalOpen(false)
+      setContestToDelete(null)
+
       // Show success message
       showSuccessAlert("Contest deleted successfully!")
 
@@ -189,7 +199,9 @@ export default function UserContestsPage() {
       fetchContests()
     } catch (error) {
       console.error("Error deleting contest:", error)
-      showErrorAlert("Failed to delete contest. Please try again later.")
+      showErrorAlert(`Failed to delete contest: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -326,7 +338,7 @@ export default function UserContestsPage() {
                             <Edit className="h-5 w-5" />
                           </Link>
                           <button
-                            onClick={() => handleDeleteContest(contest.id)}
+                            onClick={() => openDeleteModal(contest)}
                             className="text-red-600 hover:text-red-900"
                             title="Delete"
                           >
@@ -354,6 +366,21 @@ export default function UserContestsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setContestToDelete(null)
+        }}
+        onConfirm={handleDeleteContest}
+        title="Delete Contest"
+        message={`Are you sure you want to delete "${contestToDelete?.contest_name}"? This action cannot be undone.`}
+        confirmButtonText="Delete"
+        cancelButtonText="Cancel"
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

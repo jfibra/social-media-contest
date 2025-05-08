@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ImageIcon } from "lucide-react"
@@ -8,6 +8,7 @@ import { ImageIcon } from "lucide-react"
 interface LogoSelectorProps {
   onSelectLogo: (logoUrl: string) => void
   type: "company" | "team"
+  currentLogo?: string
 }
 
 // Convert S3 console URLs to direct image URLs
@@ -49,11 +50,19 @@ const COMPANY_LOGOS = [
 // Team logos array (placeholder for now)
 const TEAM_LOGOS: string[] = []
 
-export function LogoSelector({ onSelectLogo, type }: LogoSelectorProps) {
+export function LogoSelector({ onSelectLogo, type, currentLogo }: LogoSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [selectedLogo, setSelectedLogo] = useState<string | undefined>(undefined)
   const logos = type === "company" ? COMPANY_LOGOS : TEAM_LOGOS
 
+  useEffect(() => {
+    if (currentLogo) {
+      setSelectedLogo(currentLogo)
+    }
+  }, [currentLogo])
+
   const handleSelectLogo = (logoUrl: string) => {
+    setSelectedLogo(logoUrl)
     onSelectLogo(logoUrl)
     setIsOpen(false)
   }

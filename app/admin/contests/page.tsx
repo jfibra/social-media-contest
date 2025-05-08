@@ -6,7 +6,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { API_BASE_URL } from "@/app/env"
 import { Plus, RefreshCw, Edit, Trash2, Eye, AlertCircle } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-import { showConfirmAlert, showErrorAlert, showSuccessAlert } from "@/lib/swal"
+import { showErrorAlert, showSuccessAlert } from "@/lib/swal"
+import { ConfirmationModal } from "@/components/confirmation-modal"
 
 interface Contest {
   id: number
@@ -19,6 +20,11 @@ interface Contest {
   visibility: string
   created_at: string
   submissions?: any[]
+  creator?: {
+    id: number
+    name: string
+    email: string
+  }
 }
 
 export default function AdminContestsPage() {
@@ -27,6 +33,11 @@ export default function AdminContestsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+
+  // State for delete confirmation modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [contestToDelete, setContestToDelete] = useState<Contest | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchContests = async () => {
     try {
@@ -65,6 +76,11 @@ export default function AdminContestsPage() {
               { id: 1, name: "John Doe", status: "pending" },
               { id: 2, name: "Jane Smith", status: "approved" },
             ],
+            creator: {
+              id: 123,
+              name: "Admin User",
+              email: "admin@example.com",
+            },
           },
         ])
       }
@@ -86,6 +102,11 @@ export default function AdminContestsPage() {
           visibility: "public",
           created_at: "2025-04-15 10:00:00",
           submissions: [],
+          creator: {
+            id: 123,
+            name: "Admin User",
+            email: "admin@example.com",
+          },
         },
       ])
     } finally {
@@ -98,20 +119,23 @@ export default function AdminContestsPage() {
     fetchContests()
   }, [token])
 
-  const handleDeleteContest = async (id: number) => {
-    const result = await showConfirmAlert(
-      "Delete Contest",
-      "Are you sure you want to delete this contest? This action cannot be undone.",
-    )
+  // Function to open delete confirmation modal
+  const openDeleteModal = (contest: Contest) => {
+    setContestToDelete(contest)
+    setIsDeleteModalOpen(true)
+  }
 
-    if (!result.isConfirmed) {
-      return
-    }
+  // Function to handle contest deletion
+  const handleDeleteContest = async () => {
+    if (!contestToDelete) return
+
+    setIsDeleting(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/scm/contests/${id}/delete`, {
+      const response = await fetch(`${API_BASE_URL}/scm/contests/${contestToDelete.id}/delete`, {
         method: "DELETE",
         headers: {
+          "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       })
@@ -120,6 +144,10 @@ export default function AdminContestsPage() {
         throw new Error(`Failed to delete contest: ${response.status}`)
       }
 
+      // Close the modal
+      setIsDeleteModalOpen(false)
+      setContestToDelete(null)
+
       // Show success message
       showSuccessAlert("Contest deleted successfully!")
 
@@ -127,7 +155,9 @@ export default function AdminContestsPage() {
       fetchContests()
     } catch (error) {
       console.error("Error deleting contest:", error)
-      showErrorAlert("Failed to delete contest. Please try again later.")
+      showErrorAlert(`Failed to delete contest: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -206,6 +236,9 @@ export default function AdminContestsPage() {
                       Visibility
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Creator
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Submissions
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -245,6 +278,9 @@ export default function AdminContestsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {contest.creator ? contest.creator.name : "Unknown"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {contest.submissions ? contest.submissions.length : 0} submissions
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -264,7 +300,7 @@ export default function AdminContestsPage() {
                             <Edit className="h-5 w-5" />
                           </Link>
                           <button
-                            onClick={() => handleDeleteContest(contest.id)}
+                            onClick={() => openDeleteModal(contest)}
                             className="text-red-600 hover:text-red-900"
                             title="Delete"
                           >
@@ -281,17 +317,36 @@ export default function AdminContestsPage() {
         ) : (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <h2 className="text-xl font-semibold mb-4">No Contests Found</h2>
-            <p className="text-realty-text mb-6">You haven't created any contests yet.</p>
+            <p className="text-realty-text mb-6">No contests have been created yet.</p>
             <Link
               href="/admin/contests/create"
               className="inline-flex items-center px-4 py-2 bg-realty-primary text-white rounded-md hover:bg-realty-secondary transition-colors"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Your First Contest
+              Create First Contest
             </Link>
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setContestToDelete(null)
+        }}
+        onConfirm={handleDeleteContest}
+        title="Delete Contest"
+        message={
+          contestToDelete?.creator
+            ? `Are you sure you want to delete "${contestToDelete?.contest_name}" created by ${contestToDelete.creator.name}? This action cannot be undone.`
+            : `Are you sure you want to delete "${contestToDelete?.contest_name}"? This action cannot be undone.`
+        }
+        confirmButtonText="Delete"
+        cancelButtonText="Cancel"
+        isLoading={isDeleting}
+      />
     </div>
   )
 }
