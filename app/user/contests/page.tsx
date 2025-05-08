@@ -29,14 +29,15 @@ export default function UserContestsPage() {
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [scmMemberId, setScmMemberId] = useState<string | null>(null)
+  const [scmAccessId, setScmAccessId] = useState<number | null>(null)
 
   // State for delete confirmation modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [contestToDelete, setContestToDelete] = useState<Contest | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Function to get the SCM access memberid
-  const getScmMemberId = async () => {
+  // Function to get the SCM access data
+  const getScmAccessData = async () => {
     try {
       // First try to get from localStorage
       const scmAccessData = localStorage.getItem("scm_access")
@@ -46,7 +47,13 @@ export default function UserContestsPage() {
           if (scmAccess.memberid) {
             console.log("Using memberid from localStorage:", scmAccess.memberid)
             setScmMemberId(scmAccess.memberid)
-            return scmAccess.memberid
+            if (scmAccess.id) {
+              setScmAccessId(scmAccess.id)
+            }
+            return {
+              memberid: scmAccess.memberid,
+              id: scmAccess.id || null,
+            }
           }
         } catch (e) {
           console.error("Error parsing SCM access data from localStorage:", e)
@@ -78,13 +85,22 @@ export default function UserContestsPage() {
         // Store in localStorage for future use
         localStorage.setItem("scm_access", JSON.stringify(data.data))
         setScmMemberId(data.data.memberid)
-        return data.data.memberid
+        if (data.data.id) {
+          setScmAccessId(data.data.id)
+        }
+        return {
+          memberid: data.data.memberid,
+          id: data.data.id || null,
+        }
       } else {
         throw new Error("SCM access data does not contain memberid")
       }
     } catch (error) {
-      console.error("Error getting SCM memberid:", error)
-      return null
+      console.error("Error getting SCM data:", error)
+      return {
+        memberid: null,
+        id: null,
+      }
     }
   }
 
@@ -93,7 +109,8 @@ export default function UserContestsPage() {
       setRefreshing(true)
 
       // Get the correct memberid from SCM access
-      const memberId = await getScmMemberId()
+      const scmData = await getScmAccessData()
+      const memberId = scmData.memberid
 
       if (!memberId) {
         throw new Error("SCM Member ID not found. Please try logging in again.")
@@ -172,11 +189,18 @@ export default function UserContestsPage() {
   // Function to handle contest deletion
   const handleDeleteContest = async () => {
     if (!contestToDelete) return
+    if (!scmAccessId) {
+      showErrorAlert("User ID not found. Please try logging in again.")
+      return
+    }
 
     setIsDeleting(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/scm/contests/${contestToDelete.id}/delete`, {
+      // Create a URL with query parameters for the performed_by field
+      const url = `${API_BASE_URL}/scm/contests/${contestToDelete.id}/delete?updated_by=${scmAccessId}`
+
+      const response = await fetch(url, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
