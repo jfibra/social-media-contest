@@ -15,7 +15,8 @@ interface ContestPageProps {
 }
 
 export async function generateMetadata({ params }: ContestPageProps): Promise<Metadata> {
-  const contests = await getAllContests()
+  // Include private contests when generating metadata
+  const contests = await getAllContests(true)
   const contest = contests.find((c) => c.slug === params.slug)
 
   if (!contest) {
@@ -48,15 +49,15 @@ export async function generateMetadata({ params }: ContestPageProps): Promise<Me
 }
 
 export default async function ContestPage({ params }: ContestPageProps) {
-  // Try to get all contests first
-  const contests = await getAllContests()
+  // Include private contests when fetching by slug
+  const contests = await getAllContests(true)
 
-  // Find the contest by slug (getAllContests already filters for public contests)
+  // Find the contest by slug (now includes private contests)
   let contest = contests.find((c) => c.slug === params.slug)
 
   // If not found and contests array is empty, try to get the active contest
   if (!contest && contests.length === 0) {
-    const activeContest = await getActiveContest()
+    const activeContest = await getActiveContest(true) // Include private contests
     if (activeContest && activeContest.slug === params.slug) {
       contest = activeContest
     }

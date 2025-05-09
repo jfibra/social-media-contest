@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "@/app/env"
 import type { Contest, ContestResponse, ContestsResponse } from "@/types/contest"
 
-export async function getActiveContest(): Promise<Contest | null> {
+export async function getActiveContest(includePrivate = false): Promise<Contest | null> {
   try {
     // Add cache-busting query parameter to prevent caching
     const timestamp = new Date().getTime()
@@ -21,9 +21,9 @@ export async function getActiveContest(): Promise<Contest | null> {
       return null
     }
 
-    // Filter out private contests and map to our internal format
+    // Filter contests based on visibility parameter
     const contests = data["0"]
-      .filter((contest) => contest.visibility === "public")
+      .filter((contest) => includePrivate || contest.visibility === "public")
       .map((contest) => ({
         ...contest,
         name: contest.contest_name,
@@ -55,7 +55,7 @@ export async function getActiveContest(): Promise<Contest | null> {
   }
 }
 
-export async function getAllContests(): Promise<Contest[]> {
+export async function getAllContests(includePrivate = false): Promise<Contest[]> {
   try {
     // Add cache-busting query parameter to prevent caching
     const timestamp = new Date().getTime()
@@ -75,9 +75,9 @@ export async function getAllContests(): Promise<Contest[]> {
       return []
     }
 
-    // Filter out private contests and map to our internal format
+    // Filter contests based on visibility parameter
     return data["0"]
-      .filter((contest) => contest.visibility === "public")
+      .filter((contest) => includePrivate || contest.visibility === "public")
       .map((contest) => ({
         ...contest,
         name: contest.contest_name,
