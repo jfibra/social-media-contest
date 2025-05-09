@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import { API_BASE_URL } from "@/app/env"
-import { Plus, RefreshCw, Edit, Trash2, Eye, AlertCircle } from "lucide-react"
+import { Plus, RefreshCw, Edit, Trash2, Eye, AlertCircle, ListChecks } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { showErrorAlert, showSuccessAlert } from "@/lib/swal"
 import { ConfirmationModal } from "@/components/confirmation-modal"
@@ -336,6 +336,13 @@ export default function UserContestsPage() {
                             title="Edit"
                           >
                             <Edit className="h-5 w-5" />
+                          </Link>
+                          <Link
+                            href={`/user/contests/${contest.id}/submissions`}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Manage Submissions"
+                          >
+                            <ListChecks className="h-5 w-5" />
                           </Link>
                           <button
                             onClick={() => openDeleteModal(contest)}

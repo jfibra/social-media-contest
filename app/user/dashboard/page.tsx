@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/contexts/auth-context"
-import { LogOut, User, Calendar, Award, FileText, Plus } from "lucide-react"
+import { LogOut, User, Calendar, Plus } from "lucide-react"
 import Link from "next/link"
 
 export default function UserDashboard() {
@@ -15,8 +15,6 @@ export default function UserDashboard() {
       href: "/user/contests/create",
       description: "Create a new social media contest",
     },
-    { icon: Award, label: "My Submissions", href: "/user/submissions", description: "View your contest submissions" },
-    { icon: FileText, label: "Contest Rules", href: "/user/rules", description: "View contest rules and guidelines" },
   ]
 
   return (
@@ -60,7 +58,7 @@ export default function UserDashboard() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {userMenuItems.map((item) => (
               <Link
                 key={item.label}

@@ -33,6 +33,7 @@ export function ConfirmationModal({
   const router = useRouter()
   const { token, user } = useAuth()
   const [scmAccessId, setScmAccessId] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string | null>(null)
 
   // Fetch the SCM access ID for the current user
   useEffect(() => {
@@ -52,16 +53,21 @@ export function ConfirmationModal({
         if (response.ok) {
           const data = await response.json()
           if (data && data.data && data.data.id) {
-            console.log(`Found SCM access ID for ${normalizedEmail}: ${data.data.id}`)
-            setScmAccessId(data.data.id.toString())
+            const id = data.data.id.toString()
+            console.log(`Found SCM access ID for ${normalizedEmail}: ${id}`)
+            setScmAccessId(id)
+            setDebugInfo(`SCM Access ID: ${id}`)
           } else {
             console.error("SCM access ID not found in response:", data)
+            setDebugInfo(`SCM Access ID not found in response: ${JSON.stringify(data)}`)
           }
         } else {
           console.error(`Failed to fetch SCM access ID for ${normalizedEmail}: ${response.status}`)
+          setDebugInfo(`Failed to fetch SCM Access ID: ${response.status}`)
         }
       } catch (error) {
         console.error("Error fetching SCM access ID:", error)
+        setDebugInfo(`Error fetching SCM Access ID: ${error}`)
       }
     }
 
@@ -79,7 +85,19 @@ export function ConfirmationModal({
     setIsDeleting(true)
     setError(null)
 
+    // Log the SCM access ID for debugging
+    console.log("Deleting contest with SCM access ID:", scmAccessId)
+
+    if (!scmAccessId) {
+      setError("SCM access ID not found. Please try again.")
+      setIsDeleting(false)
+      return
+    }
+
     try {
+      // Try to parse as number, but fallback to string if it fails
+      const parsedId = Number.isNaN(Number(scmAccessId)) ? scmAccessId : Number(scmAccessId)
+
       const response = await fetch("/api/contests/delete", {
         method: "POST",
         headers: {
@@ -88,13 +106,22 @@ export function ConfirmationModal({
         },
         body: JSON.stringify({
           contestId,
-          scmAccessId, // Include the SCM access ID
+          scmAccessId: parsedId,
         }),
       })
 
+      const responseText = await response.text()
+      console.log("Delete API response:", responseText)
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to delete contest")
+        let errorMessage = "Failed to delete contest"
+        try {
+          const errorData = JSON.parse(responseText)
+          errorMessage = errorData.message || errorMessage
+        } catch (e) {
+          errorMessage = `${errorMessage}: ${responseText}`
+        }
+        throw new Error(errorMessage)
       }
 
       // Close the modal
@@ -125,6 +152,12 @@ export function ConfirmationModal({
         <div className="p-6">
           <h3 className="text-lg font-semibold mb-2">{title}</h3>
           <p className="text-gray-600 mb-4">{message}</p>
+
+          {process.env.NODE_ENV === "development" && debugInfo && (
+            <div className="mb-4 p-3 rounded-md bg-gray-100 border border-gray-200">
+              <p className="text-xs font-mono">{debugInfo}</p>
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200">

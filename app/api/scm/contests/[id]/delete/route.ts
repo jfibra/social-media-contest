@@ -1,17 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { API_BASE_URL } from "@/app/env"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { contestId, scmAccessId } = await request.json()
-
-    if (!contestId) {
-      return NextResponse.json({ success: false, message: "Contest ID is required" }, { status: 400 })
-    }
-
-    if (!scmAccessId) {
-      return NextResponse.json({ success: false, message: "SCM Access ID is required" }, { status: 400 })
-    }
+    const contestId = params.id
+    const { performed_by, performed_by_id, performedBy, performedById, performer_id, user_id, scm_access_id } =
+      await request.json()
 
     // Get the token from the request headers
     const authHeader = request.headers.get("authorization")
@@ -21,21 +15,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Authentication token is required" }, { status: 401 })
     }
 
-    // Log the request for debugging
-    console.log("Deleting contest with params:", { contestId, performed_by_id: scmAccessId })
+    // Log all possible IDs for debugging
+    console.log("Delete contest params:", {
+      contestId,
+      performed_by,
+      performed_by_id,
+      performedBy,
+      performedById,
+      performer_id,
+      user_id,
+      scm_access_id,
+    })
 
-    // Create the request body with multiple variations of the parameter to ensure one works
-    const requestBody = {
-      performed_by: scmAccessId,
-      performed_by_id: scmAccessId,
-      performedBy: scmAccessId,
-      performedById: scmAccessId,
-      performer_id: scmAccessId,
-      user_id: scmAccessId,
-      scm_access_id: scmAccessId,
+    // Use the first available ID
+    const performerId =
+      performed_by || performed_by_id || performedBy || performedById || performer_id || user_id || scm_access_id
+
+    if (!performerId) {
+      return NextResponse.json({ success: false, message: "Performer ID is required" }, { status: 400 })
     }
-
-    console.log("Request body:", JSON.stringify(requestBody))
 
     // Make the request to the API to delete the contest
     const response = await fetch(`${API_BASE_URL}/scm/contests/${contestId}/delete`, {
@@ -44,15 +42,13 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({ performed_by: performerId }),
     })
 
-    // Log the response for debugging
     const responseText = await response.text()
-    console.log("API response:", responseText)
+    console.log("Backend API response:", responseText)
 
     if (!response.ok) {
-      console.error("API error response:", responseText)
       return NextResponse.json(
         { success: false, message: `Failed to delete contest: ${responseText}` },
         { status: response.status },
