@@ -4,10 +4,11 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import { API_BASE_URL } from "@/app/env"
-import { Plus, RefreshCw, Edit, Trash2, Eye, AlertCircle } from "lucide-react"
+import { Plus, RefreshCw, Edit, Trash2, Eye, AlertCircle, FileText } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { showErrorAlert, showSuccessAlert } from "@/lib/swal"
 import { ConfirmationModal } from "@/components/confirmation-modal"
+import { getScmAccessData } from "@/lib/scm-helpers"
 
 interface Contest {
   id: number
@@ -28,23 +29,51 @@ interface Contest {
 }
 
 export default function AdminContestsPage() {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [contests, setContests] = useState<Contest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [scmAccessId, setScmAccessId] = useState<number | null>(null)
 
   // State for delete confirmation modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [contestToDelete, setContestToDelete] = useState<Contest | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Get SCM Access ID
+  const getScmAccessId = async () => {
+    try {
+      if (!user?.email) {
+        throw new Error("User email not found")
+      }
+
+      // Get SCM access data from localStorage or API
+      const scmAccessData = await getScmAccessData(user.email, token)
+
+      if (scmAccessData && scmAccessData.id) {
+        const accessId = Number.parseInt(scmAccessData.id, 10)
+        console.log(`Using SCM access ID: ${accessId} for user ${user.email}`)
+        setScmAccessId(accessId)
+        return accessId
+      } else {
+        throw new Error("SCM access ID not found in user data")
+      }
+    } catch (error) {
+      console.error("Error getting SCM access ID:", error)
+      showErrorAlert(`Failed to retrieve user data: ${error instanceof Error ? error.message : String(error)}`)
+      return null
+    }
+  }
+
   const fetchContests = async () => {
     try {
       setRefreshing(true)
       // Using the correct API endpoint for fetching contests with submissions
       const response = await fetch(`${API_BASE_URL}/scm/contests/all-with-submissions`, {
+        method: "GET", // Explicitly set method
         headers: {
+          "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         cache: "no-store",
@@ -57,58 +86,16 @@ export default function AdminContestsPage() {
       const data = await response.json()
 
       if (data.success && data["0"]) {
+        console.log("Fetched contests:", data["0"])
         setContests(data["0"])
         setError(null)
       } else {
-        // Fallback data for development
-        setContests([
-          {
-            id: 1,
-            contest_name: "Summer Promo Contest",
-            slug: "summer-promo-contest",
-            description: "Join our summer promo and win prizes!",
-            start_time: "2025-05-01 00:00:00",
-            end_time: "2025-05-31 23:59:59",
-            status: "upcoming",
-            visibility: "public",
-            created_at: "2025-04-15 10:00:00",
-            submissions: [
-              { id: 1, name: "John Doe", status: "pending" },
-              { id: 2, name: "Jane Smith", status: "approved" },
-            ],
-            creator: {
-              id: 123,
-              name: "Admin User",
-              email: "admin@example.com",
-            },
-          },
-        ])
+        throw new Error("Failed to fetch contests: Invalid response format")
       }
     } catch (error) {
       console.error("Error fetching contests:", error)
       setError(`Failed to load contests: ${error instanceof Error ? error.message : String(error)}`)
       showErrorAlert(`Failed to load contests: ${error instanceof Error ? error.message : String(error)}`)
-
-      // Fallback data for development
-      setContests([
-        {
-          id: 1,
-          contest_name: "Summer Promo Contest",
-          slug: "summer-promo-contest",
-          description: "Join our summer promo and win prizes!",
-          start_time: "2025-05-01 00:00:00",
-          end_time: "2025-05-31 23:59:59",
-          status: "upcoming",
-          visibility: "public",
-          created_at: "2025-04-15 10:00:00",
-          submissions: [],
-          creator: {
-            id: 123,
-            name: "Admin User",
-            email: "admin@example.com",
-          },
-        },
-      ])
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -116,7 +103,12 @@ export default function AdminContestsPage() {
   }
 
   useEffect(() => {
-    fetchContests()
+    const init = async () => {
+      await getScmAccessId()
+      await fetchContests()
+    }
+
+    init()
   }, [token])
 
   // Function to open delete confirmation modal
@@ -203,6 +195,16 @@ export default function AdminContestsPage() {
             </Link>
           </div>
         </div>
+
+        {/* Debug info for development - only shown in development mode */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="mb-4 p-3 bg-gray-100 rounded-md text-xs">
+            <p>
+              <strong>Debug Info:</strong>
+            </p>
+            <p>SCM Access ID: {scmAccessId || "Not loaded yet"}</p>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 rounded-md bg-red-50 border border-red-200">
@@ -299,6 +301,13 @@ export default function AdminContestsPage() {
                           >
                             <Edit className="h-5 w-5" />
                           </Link>
+                          <Link
+                            href={`/admin/contests/${contest.id}/submissions`}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Manage Submissions"
+                          >
+                            <FileText className="h-5 w-5" />
+                          </Link>
                           <button
                             onClick={() => openDeleteModal(contest)}
                             className="text-red-600 hover:text-red-900"
@@ -346,6 +355,8 @@ export default function AdminContestsPage() {
         confirmButtonText="Delete"
         cancelButtonText="Cancel"
         isLoading={isDeleting}
+        contestId={contestToDelete?.id}
+        isAdmin={true}
       />
     </div>
   )

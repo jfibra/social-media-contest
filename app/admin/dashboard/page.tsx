@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/contexts/auth-context"
-import { LogOut, User, Users, Calendar, Award, Settings, BarChart2, Plus } from "lucide-react"
+import { LogOut, User, Users, Calendar, BarChart2, Plus } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminDashboard() {
@@ -15,15 +15,8 @@ export default function AdminDashboard() {
       href: "/admin/contests/create",
       description: "Create a new social media contest",
     },
-    {
-      icon: Award,
-      label: "Submissions",
-      href: "/admin/submissions",
-      description: "Review and manage contest submissions",
-    },
     { icon: BarChart2, label: "Analytics", href: "/admin/analytics", description: "View contest performance metrics" },
     { icon: Users, label: "Manage Users", href: "/admin/users", description: "Manage user accounts and permissions" },
-    { icon: Settings, label: "Settings", href: "/admin/settings", description: "Configure system settings" },
   ]
 
   return (
@@ -67,7 +60,7 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {adminMenuItems.map((item) => (
               <Link
                 key={item.label}

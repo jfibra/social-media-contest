@@ -71,3 +71,10 @@ export const showApiErrorAlert = (error: any) => {
 
   return showErrorAlert(message)
 }
+
+// Adding new function names as aliases to maintain backward compatibility
+export const showError = showErrorAlert
+export const showSuccess = showSuccessAlert
+export const showInfo = showInfoAlert
+export const showConfirm = showConfirmAlert
+export const showLoading = showLoadingAlert
