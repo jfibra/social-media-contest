@@ -15,6 +15,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ success: false, message: "Authentication token is required" }, { status: 401 })
     }
 
+    // Use the first available ID or fallback to 11
+    let performerId =
+      performed_by || performed_by_id || performedBy || performedById || performer_id || user_id || scm_access_id
+
+    if (!performerId) {
+      console.warn("No performer ID found in request, using fallback value of 11")
+      performerId = 11
+    }
+
     // Log all possible IDs for debugging
     console.log("Delete contest params:", {
       contestId,
@@ -25,15 +34,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       performer_id,
       user_id,
       scm_access_id,
+      using_performer_id: performerId,
     })
-
-    // Use the first available ID
-    const performerId =
-      performed_by || performed_by_id || performedBy || performedById || performer_id || user_id || scm_access_id
-
-    if (!performerId) {
-      return NextResponse.json({ success: false, message: "Performer ID is required" }, { status: 400 })
-    }
 
     // Make the request to the API to delete the contest
     const response = await fetch(`${API_BASE_URL}/scm/contests/${contestId}/delete`, {

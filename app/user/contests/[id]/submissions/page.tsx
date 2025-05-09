@@ -22,6 +22,7 @@ import Link from "next/link"
 import type { Submission } from "@/types/submission"
 import { SubmissionEditModal } from "@/components/submission-edit-modal"
 import { VerifyLikesModal } from "@/components/verify-likes-modal"
+import { getScmAccessData } from "@/lib/scm-helpers"
 
 interface Contest {
   id: number
@@ -45,7 +46,7 @@ export default function ContestSubmissionsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
-  const [scmMemberId, setScmMemberId] = useState<number | null>(null)
+  const [scmAccessId, setScmAccessId] = useState<number | null>(null)
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
   // State for modals
@@ -57,65 +58,27 @@ export default function ContestSubmissionsPage() {
   const [showRanking, setShowRanking] = useState(false)
   const [rankedSubmissions, setRankedSubmissions] = useState<Submission[]>([])
 
-  // Function to get the SCM access memberid
-  const getScmMemberId = async () => {
+  // Function to get the SCM access ID
+  const getScmAccessId = async () => {
     try {
-      // First try to get from localStorage
-      const scmAccessData = localStorage.getItem("scm_access")
-      if (scmAccessData) {
-        try {
-          const scmAccess = JSON.parse(scmAccessData)
-          if (scmAccess.memberid) {
-            console.log("Using memberid from localStorage:", scmAccess.memberid)
-            // Convert to number to ensure it's not a string
-            const memberId = Number.parseInt(scmAccess.memberid, 10)
-            setScmMemberId(memberId)
-            return memberId
-          }
-        } catch (e) {
-          console.error("Error parsing SCM access data from localStorage:", e)
-        }
-      }
-
-      // If not in localStorage, fetch from API
-      const email = user?.email
-      if (!email) {
+      if (!user?.email) {
         throw new Error("User email not found")
       }
 
-      console.log("Fetching SCM access data for email:", email)
-      const response = await fetch(`/api/scm/access/find-by-email/${encodeURIComponent(email)}`, {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        cache: "no-store",
-      })
+      // Get SCM access data from localStorage or API
+      const scmAccessData = await getScmAccessData(user.email, token)
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch SCM access data: ${response.status}`)
-      }
-
-      const data = await response.json()
-      if (data.success && data.data && data.data.memberid) {
-        console.log("Fetched memberid from API:", data.data.memberid)
-        // Convert to number to ensure it's not a string
-        const memberId = Number.parseInt(data.data.memberid, 10)
-        // Store in localStorage for future use
-        localStorage.setItem(
-          "scm_access",
-          JSON.stringify({
-            ...data.data,
-            memberid: memberId,
-          }),
-        )
-        setScmMemberId(memberId)
-        return memberId
+      if (scmAccessData && scmAccessData.id) {
+        const accessId = Number.parseInt(scmAccessData.id, 10)
+        console.log(`Using SCM access ID: ${accessId} for user ${user.email}`)
+        setScmAccessId(accessId)
+        return accessId
       } else {
-        throw new Error("SCM access data does not contain memberid")
+        throw new Error("SCM access ID not found in user data")
       }
     } catch (error) {
-      console.error("Error getting SCM memberid:", error)
+      console.error("Error getting SCM access ID:", error)
+      showErrorAlert(`Failed to retrieve user data: ${error instanceof Error ? error.message : String(error)}`)
       return null
     }
   }
@@ -126,11 +89,13 @@ export default function ContestSubmissionsPage() {
       setRefreshing(true)
       setLoading(true)
 
-      console.log(`Fetching contest data from: ${API_BASE_URL}/scm/contests/${contestId}/submission-management`)
+      console.log(`Fetching contest data from: ${API_BASE_URL}/scm/contests/${contestId}/submission-management}`)
       console.log(`Token present:`, !!token)
 
       const response = await fetch(`${API_BASE_URL}/scm/contests/${contestId}/submission-management`, {
+        method: "GET", // Explicitly set method to GET
         headers: {
+          "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         cache: "no-store",
@@ -278,7 +243,7 @@ export default function ContestSubmissionsPage() {
 
   useEffect(() => {
     const init = async () => {
-      await getScmMemberId()
+      await getScmAccessId()
       await fetchContestWithSubmissions()
     }
 
@@ -287,25 +252,24 @@ export default function ContestSubmissionsPage() {
 
   // Function to handle submission status change
   const handleStatusChange = async (submission: Submission, newStatus: "approved" | "rejected") => {
-    if (!scmMemberId) {
-      showErrorAlert("SCM Member ID not found. Please try logging in again.")
+    if (!scmAccessId) {
+      showErrorAlert("SCM Access ID not found. Please try logging in again.")
       return
     }
 
     try {
       setActionInProgress(`${newStatus}-${submission.id}`)
 
-      // Ensure scmMemberId is a number
-      const memberId = typeof scmMemberId === "string" ? Number.parseInt(scmMemberId, 10) : scmMemberId
-
-      // Prepare the payload
+      // Prepare the payload - ensure updated_by is included for performed_by in logs
       const payload = {
-        updated_by: memberId, // Send as a number, not a string
+        updated_by: scmAccessId, // Use scm_access_id
+        performed_by: scmAccessId, // Use same ID for performed_by
         verified_likes:
           submission.verified_likes || submission.likes_verification_json?.likes || submission.initial_likes,
       }
 
       console.log(`Changing submission ${submission.id} status to ${newStatus}`, payload)
+      console.log(`Using scm_access_id: ${scmAccessId} for updated_by and performed_by`)
 
       // Try direct API call to backend
       const directEndpoint =
@@ -314,9 +278,15 @@ export default function ContestSubmissionsPage() {
           : `${API_BASE_URL}/scm/submissions/${submission.id}/reject`
 
       console.log(`Trying direct API call to: ${directEndpoint}`)
+      console.log(`Method: POST`)
+      console.log(`Headers:`, {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      })
+      console.log(`Body:`, JSON.stringify(payload))
 
       const response = await fetch(directEndpoint, {
-        method: "POST",
+        method: "POST", // Explicitly set method to POST
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -359,27 +329,38 @@ export default function ContestSubmissionsPage() {
 
   // Function to handle submission update
   const handleSubmissionUpdate = async (updatedData: Partial<Submission>) => {
-    if (!selectedSubmission || !scmMemberId) return
+    if (!selectedSubmission) return
+
+    if (!scmAccessId) {
+      showErrorAlert("SCM Access ID not found. Please try logging in again.")
+      return
+    }
 
     try {
       setActionInProgress(`edit-${selectedSubmission.id}`)
 
-      // Ensure scmMemberId is a number
-      const memberId = typeof scmMemberId === "string" ? Number.parseInt(scmMemberId, 10) : scmMemberId
-
+      // Prepare the payload - ensure updated_by is included for performed_by in logs
       const payload = {
         ...updatedData,
-        updated_by: memberId, // Send as a number, not a string
+        updated_by: scmAccessId, // Use scm_access_id
+        performed_by: scmAccessId, // Use same ID for performed_by
       }
 
       console.log(`Updating submission ${selectedSubmission.id}:`, payload)
+      console.log(`Using scm_access_id: ${scmAccessId} for updated_by and performed_by`)
 
       // Try direct API call to backend
       const directEndpoint = `${API_BASE_URL}/scm/submissions/${selectedSubmission.id}/update`
       console.log(`Trying direct API call to: ${directEndpoint}`)
+      console.log(`Method: POST`)
+      console.log(`Headers:`, {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      })
+      console.log(`Body:`, JSON.stringify(payload))
 
       const response = await fetch(directEndpoint, {
-        method: "POST",
+        method: "POST", // Explicitly set method to POST
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -408,32 +389,43 @@ export default function ContestSubmissionsPage() {
 
   // Function to handle likes verification
   const handleVerifyLikes = async (verificationData: { likes: number; screenshot_url?: string }) => {
-    if (!selectedSubmission || !scmMemberId) return
+    if (!selectedSubmission) return
+
+    if (!scmAccessId) {
+      showErrorAlert("SCM Access ID not found. Please try logging in again.")
+      return
+    }
 
     try {
       setActionInProgress(`verify-${selectedSubmission.id}`)
 
-      // Ensure scmMemberId is a number
-      const memberId = typeof scmMemberId === "string" ? Number.parseInt(scmMemberId, 10) : scmMemberId
-
+      // Prepare the payload - ensure updated_by is included for performed_by in logs
       const payload = {
         verified_likes: verificationData.likes,
         likes_verification_json: {
           ...verificationData,
           verified_at: new Date().toISOString(),
-          verified_by: memberId,
+          verified_by: scmAccessId,
         },
-        updated_by: memberId, // Send as a number, not a string
+        updated_by: scmAccessId, // Use scm_access_id
+        performed_by: scmAccessId, // Use same ID for performed_by
       }
 
       console.log(`Verifying likes for submission ${selectedSubmission.id}:`, payload)
+      console.log(`Using scm_access_id: ${scmAccessId} for updated_by and performed_by`)
 
       // Try direct API call to backend
       const directEndpoint = `${API_BASE_URL}/scm/submissions/${selectedSubmission.id}/update`
       console.log(`Trying direct API call to: ${directEndpoint}`)
+      console.log(`Method: POST`)
+      console.log(`Headers:`, {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      })
+      console.log(`Body:`, JSON.stringify(payload))
 
       const response = await fetch(directEndpoint, {
-        method: "POST",
+        method: "POST", // Explicitly set method to POST
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -509,6 +501,16 @@ export default function ContestSubmissionsPage() {
             </button>
           </div>
         </div>
+
+        {/* Debug info for development - only shown in development mode */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="mb-4 p-3 bg-gray-100 rounded-md text-xs">
+            <p>
+              <strong>Debug Info:</strong>
+            </p>
+            <p>SCM Access ID: {scmAccessId || "Not loaded yet"}</p>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 rounded-md bg-red-50 border border-red-200">

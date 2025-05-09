@@ -66,7 +66,7 @@ export async function getScmAccessData(email: string | undefined, token?: string
     if (scmAccessData) {
       try {
         const scmAccess = JSON.parse(scmAccessData)
-        if (scmAccess.memberid) {
+        if (scmAccess.id) {
           console.log("Using SCM access data from localStorage")
           return scmAccess
         }
@@ -82,6 +82,7 @@ export async function getScmAccessData(email: string | undefined, token?: string
 
     console.log("Fetching SCM access data for email:", email)
     const response = await fetch(`/api/scm/access/find-by-email/${encodeURIComponent(email)}`, {
+      method: "GET", // Explicitly set method to GET
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -95,7 +96,7 @@ export async function getScmAccessData(email: string | undefined, token?: string
 
     const data = await response.json()
     if (data.success && data.data) {
-      console.log("Fetched SCM access data from API")
+      console.log("Fetched SCM access data from API:", data.data)
       // Store in localStorage for future use
       localStorage.setItem("scm_access", JSON.stringify(data.data))
       return data.data

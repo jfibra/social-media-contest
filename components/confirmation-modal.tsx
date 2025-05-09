@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { getScmAccessData } from "@/lib/scm-helpers"
 
 interface ConfirmationModalProps {
   isOpen: boolean
@@ -41,32 +42,22 @@ export function ConfirmationModal({
       if (!user?.email) return
 
       try {
-        const normalizedEmail = user.email.toLowerCase().trim()
-        const response = await fetch(`/api/scm/access/find-by-email/${encodeURIComponent(normalizedEmail)}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          cache: "no-store",
-        })
+        // Get SCM access data from localStorage or API
+        const scmAccessData = await getScmAccessData(user.email, token)
 
-        if (response.ok) {
-          const data = await response.json()
-          if (data && data.data && data.data.id) {
-            const id = data.data.id.toString()
-            console.log(`Found SCM access ID for ${normalizedEmail}: ${id}`)
-            setScmAccessId(id)
-            setDebugInfo(`SCM Access ID: ${id}`)
-          } else {
-            console.error("SCM access ID not found in response:", data)
-            setDebugInfo(`SCM Access ID not found in response: ${JSON.stringify(data)}`)
-          }
+        if (scmAccessData && scmAccessData.id) {
+          const id = scmAccessData.id.toString()
+          console.log(`Using SCM access ID: ${id} for user ${user.email}`)
+          setScmAccessId(id)
+          setDebugInfo(`SCM Access ID: ${id}`)
         } else {
-          console.error(`Failed to fetch SCM access ID for ${normalizedEmail}: ${response.status}`)
-          setDebugInfo(`Failed to fetch SCM Access ID: ${response.status}`)
+          console.error("SCM access ID not found in user data")
+          setError("SCM access ID not found. Please try again or contact support.")
+          setDebugInfo(`SCM Access ID not found in user data`)
         }
       } catch (error) {
         console.error("Error fetching SCM access ID:", error)
+        setError("Failed to retrieve user data. Please try again or contact support.")
         setDebugInfo(`Error fetching SCM Access ID: ${error}`)
       }
     }
@@ -74,11 +65,16 @@ export function ConfirmationModal({
     if (isOpen && user?.email) {
       fetchScmAccessId()
     }
-  }, [isOpen, user?.email])
+  }, [isOpen, user?.email, token])
 
   const handleDelete = async () => {
     if (!contestId) {
       onConfirm()
+      return
+    }
+
+    if (!scmAccessId) {
+      setError("SCM access ID not found. Please try logging in again.")
       return
     }
 
@@ -87,16 +83,16 @@ export function ConfirmationModal({
 
     // Log the SCM access ID for debugging
     console.log("Deleting contest with SCM access ID:", scmAccessId)
-
-    if (!scmAccessId) {
-      setError("SCM access ID not found. Please try again.")
-      setIsDeleting(false)
-      return
-    }
+    setDebugInfo(`Deleting with SCM Access ID: ${scmAccessId}`)
 
     try {
       // Try to parse as number, but fallback to string if it fails
       const parsedId = Number.isNaN(Number(scmAccessId)) ? scmAccessId : Number(scmAccessId)
+
+      console.log("Delete request payload:", {
+        contestId,
+        scmAccessId: parsedId,
+      })
 
       const response = await fetch("/api/contests/delete", {
         method: "POST",
@@ -179,7 +175,7 @@ export function ConfirmationModal({
             <button
               onClick={handleDelete}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center"
-              disabled={isDeleting || (contestId && !scmAccessId)}
+              disabled={isDeleting || !scmAccessId}
             >
               {isDeleting ? (
                 <>
