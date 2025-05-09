@@ -7,4 +7,4 @@ let apiBaseUrl2 = process.env.NEXT_PUBLIC_API_BASE_URL_2 || "https://api.leuteri
 if (apiBaseUrl2.startsWith("http:")) {
   apiBaseUrl2 = apiBaseUrl2.replace("http:", "https:")
 }
-export const NEXT_PUBLIC_API_BASE_URL_2 = apiBaseUrl2
+export const API_BASE_URL_2 = apiBaseUrl2
