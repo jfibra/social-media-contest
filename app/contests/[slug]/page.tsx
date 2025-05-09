@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getAllContests, getActiveContest, getContestBySlug } from "@/lib/api"
+import { getContestBySlug } from "@/lib/api"
 import { SITE_URL } from "@/app/env"
 import ContestClientPage from "./ContestClientPage"
 
@@ -17,7 +17,7 @@ interface ContestPageProps {
 export async function generateMetadata({ params }: ContestPageProps): Promise<Metadata> {
   console.log(`Generating metadata for contest with slug: ${params.slug}`)
 
-  // Try to get the contest directly by slug first
+  // Try to get the contest by slug (includes private contests)
   const contest = await getContestBySlug(params.slug)
 
   if (!contest) {
@@ -55,58 +55,13 @@ export async function generateMetadata({ params }: ContestPageProps): Promise<Me
 export default async function ContestPage({ params }: ContestPageProps) {
   console.log(`Rendering contest page for slug: ${params.slug}`)
 
-  // Try to get the contest directly by slug first (including private contests)
-  let contest = await getContestBySlug(params.slug)
+  // Try to get the contest by slug (includes private contests)
+  const contest = await getContestBySlug(params.slug)
 
-  if (contest) {
-    console.log(`Found contest directly by slug: ${contest.name} (visibility: ${contest.visibility})`)
-  } else {
-    console.log(`Contest not found by slug, trying alternative methods`)
-
-    // If not found, try to get all contests (including private ones)
-    const contests = await getAllContests(true)
-    contest = contests.find((c) => c.slug === params.slug)
-
-    if (contest) {
-      console.log(`Found contest in all contests: ${contest.name} (visibility: ${contest.visibility})`)
-    } else {
-      console.log(`Contest not found in all contests, trying active contest`)
-
-      // If still not found, try to get the active contest
-      const activeContest = await getActiveContest(true)
-      if (activeContest && activeContest.slug === params.slug) {
-        contest = activeContest
-        console.log(`Found contest as active contest: ${contest.name} (visibility: ${contest.visibility})`)
-      } else {
-        console.log(`Contest not found as active contest either`)
-      }
-    }
-  }
-
-  // If still not found, use a fallback contest for development or redirect to 404
+  // If not found, show 404
   if (!contest) {
-    console.log(`Contest not found, using fallback or 404`)
-
-    // In production, we would redirect to 404
-    if (process.env.NODE_ENV === "production") {
-      console.log(`Production environment, redirecting to 404`)
-      notFound()
-    }
-
-    // For development, use a fallback contest
-    console.log(`Development environment, using fallback contest`)
-    contest = {
-      id: 999,
-      name: params.slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-      description: "This is a fallback contest for development purposes.",
-      logoUrl: "/placeholder.svg?key=fallback-logo",
-      posterUrl: "/placeholder.svg?key=fallback-poster",
-      startDate: new Date().toISOString(),
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      status: "upcoming" as const,
-      visibility: "public" as const,
-      slug: params.slug,
-    }
+    console.log(`Contest not found, redirecting to 404`)
+    notFound()
   }
 
   console.log(`Rendering contest client page for: ${contest.name} (visibility: ${contest.visibility})`)

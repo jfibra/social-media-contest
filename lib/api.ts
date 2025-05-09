@@ -5,52 +5,23 @@ import type { Contest, ContestResponse, ContestsResponse } from "@/types/contest
 export async function getContestBySlug(slug: string): Promise<Contest | null> {
   try {
     console.log(`Fetching contest with slug: ${slug}`)
-    // Add cache-busting query parameter to prevent caching
-    const timestamp = new Date().getTime()
-    const response = await fetch(`${API_BASE_URL}/scm/contests/by-slug/${slug}?t=${timestamp}`, {
-      cache: "no-store", // Disable caching
-      next: { revalidate: 0 }, // Disable revalidation
-    })
 
-    if (!response.ok) {
-      // If the specific endpoint fails, fall back to getting all contests
-      console.log(`Failed to fetch contest by slug, falling back to all contests: ${response.status}`)
-      const allContests = await getAllContests(true) // Include private contests
-      return allContests.find((c) => c.slug === slug) || null
-    }
+    // Instead of trying to fetch by slug directly, get all contests and filter
+    const allContests = await getAllContests(true) // Include private contests
 
-    const data = await response.json()
+    // Find the contest with the matching slug
+    const contest = allContests.find((c) => c.slug === slug)
 
-    if (!data.success || !data.contest) {
-      console.error("No contest found or API error")
+    if (!contest) {
+      console.log(`No contest found with slug: ${slug}`)
       return null
     }
 
-    // Map to our internal format
-    const contest = {
-      ...data.contest,
-      name: data.contest.contest_name,
-      startDate: data.contest.start_time,
-      endDate: data.contest.end_time,
-      logoUrl: data.contest.logo_url,
-      posterUrl: data.contest.poster_url,
-      rules: data.contest.contest_rules,
-      prizes: data.contest.prizes,
-    }
-
-    return contest as unknown as Contest
+    console.log(`Found contest by slug: ${contest.name} (visibility: ${contest.visibility})`)
+    return contest
   } catch (error) {
     console.error(`Error fetching contest by slug ${slug}:`, error)
-
-    // Fall back to getting all contests
-    try {
-      console.log("Falling back to getting all contests")
-      const allContests = await getAllContests(true) // Include private contests
-      return allContests.find((c) => c.slug === slug) || null
-    } catch (fallbackError) {
-      console.error("Error in fallback:", fallbackError)
-      return null
-    }
+    return null
   }
 }
 
@@ -134,6 +105,11 @@ export async function getAllContests(includePrivate = false): Promise<Contest[]>
 
     // Log the raw data for debugging
     console.log(`Raw contests data: ${data["0"].length} contests found`)
+
+    // Log each contest for debugging
+    data["0"].forEach((contest, index) => {
+      console.log(`Contest ${index}: ${contest.contest_name}, slug: ${contest.slug}, visibility: ${contest.visibility}`)
+    })
 
     // Filter contests based on visibility parameter
     const filteredContests = data["0"]
