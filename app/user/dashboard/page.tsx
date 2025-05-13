@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/contexts/auth-context"
-import { LogOut, User, Calendar, Plus } from "lucide-react"
+import { LogOut, User, Calendar, Plus, Palette } from "lucide-react"
 import Link from "next/link"
 
 export default function UserDashboard() {
@@ -14,6 +14,12 @@ export default function UserDashboard() {
       label: "Create Contest",
       href: "/user/contests/create",
       description: "Create a new social media contest",
+    },
+    {
+      icon: Palette,
+      label: "Poster Generator",
+      href: "/user/poster-generator",
+      description: "Create custom contest posters",
     },
   ]
 
@@ -58,7 +64,7 @@ export default function UserDashboard() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {userMenuItems.map((item) => (
               <Link
                 key={item.label}
